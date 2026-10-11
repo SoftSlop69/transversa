@@ -12,7 +12,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -115,12 +119,13 @@ fun InfoScreen(
     Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
         val themeModes = AppThemeMode.entries
         SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max).padding(horizontal = 16.dp, vertical = 4.dp),
         ) {
             themeModes.forEachIndexed { index, mode ->
                 SegmentedButton(
                     selected = themeMode == mode,
                     onClick = { onThemeModeChange(mode) },
+                    modifier = Modifier.fillMaxHeight().heightIn(min = 56.dp),
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = themeModes.size),
                     icon = {},
                     label = {

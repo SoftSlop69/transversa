@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
     private var cachedOutput: CachedOutput? = null
     private var pendingSaveMedia: MediaDescriptor? = null
     private var pendingSavePreset: ConversionPreset? = null
-    private var pendingNotificationAction: (() -> Unit)? = null
     private val presetPreferences by lazy { PresetPreferences(this) }
     private val conversionHistory by lazy { ConversionHistory(this) }
     private lateinit var donationBilling: DonationBilling
@@ -102,22 +101,9 @@ class MainActivity : ComponentActivity() {
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
+                appearancePreferences.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, granted).apply()
                 refreshNotificationsEnabled()
                 if (!granted) Toast.makeText(this@MainActivity, R.string.notifications_disabled, Toast.LENGTH_LONG).show()
-                pendingNotificationAction?.invoke()
-                pendingNotificationAction = null
-            }
-
-            fun requestNotificationPermission(action: () -> Unit) {
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                    ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    pendingNotificationAction = action
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    action()
-                }
             }
 
             DisposableEffect(Unit) {
@@ -257,15 +243,18 @@ class MainActivity : ComponentActivity() {
                 notificationsEnabled = notificationsEnabledState.value,
                 onNotificationsEnabledChange = { enabled ->
                     if (!enabled) {
-                        openNotificationSettings()
+                        appearancePreferences.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, false).apply()
+                        refreshNotificationsEnabled()
                     } else if (
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                         ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                     ) {
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else if (!NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()) {
+                        appearancePreferences.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, true).apply()
                         openNotificationSettings()
                     } else {
+                        appearancePreferences.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, true).apply()
                         refreshNotificationsEnabled()
                     }
                 },
@@ -302,21 +291,19 @@ class MainActivity : ComponentActivity() {
                 },
                 onSaveMedia = { media, preset ->
                     activePreset = preset
-                    requestNotificationPermission {
-                        val spec = outputSpec(preset)
-                        pendingSaveMedia = media
-                        pendingSavePreset = preset
-                        outputState = MediaOutputState(message = getString(R.string.choose_save_destination))
-                        val createDocument = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = spec.mimeType
-                            putExtra(Intent.EXTRA_TITLE, outputFileName(media.displayName, spec.extension))
-                            presetPreferences.lastSaveLocation()?.let { initialUri ->
-                                putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
-                            }
+                    val spec = outputSpec(preset)
+                    pendingSaveMedia = media
+                    pendingSavePreset = preset
+                    outputState = MediaOutputState(message = getString(R.string.choose_save_destination))
+                    val createDocument = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = spec.mimeType
+                        putExtra(Intent.EXTRA_TITLE, outputFileName(media.displayName, spec.extension))
+                        presetPreferences.lastSaveLocation()?.let { initialUri ->
+                            putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
                         }
-                        saveDocumentPicker.launch(createDocument)
                     }
+                    saveDocumentPicker.launch(createDocument)
                 },
                 onOpenSavedFile = { savedUri ->
                     openSavedFileLocation(savedUri)
@@ -324,14 +311,12 @@ class MainActivity : ComponentActivity() {
                 onShareMedia = { media, preset ->
                     activePreset = preset
                     presetRevision++
-                    requestNotificationPermission {
-                        outputState = MediaOutputState(isBusy = true)
-                        runCatching {
-                            activeConversionJobId = ConversionJob.start(this@MainActivity, media, preset, ConversionJob.ACTION_SHARE)
-                        }.onFailure { failure ->
-                            android.util.Log.e(TAG, "Could not start background share", failure)
-                            outputState = MediaOutputState(message = getString(R.string.output_action_failed), hasError = true)
-                        }
+                    outputState = MediaOutputState(isBusy = true)
+                    runCatching {
+                        activeConversionJobId = ConversionJob.start(this@MainActivity, media, preset, ConversionJob.ACTION_SHARE)
+                    }.onFailure { failure ->
+                        android.util.Log.e(TAG, "Could not start background share", failure)
+                        outputState = MediaOutputState(message = getString(R.string.output_action_failed), hasError = true)
                     }
                 },
                 onDeleteHistoryEntry = { id ->
@@ -373,7 +358,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshNotificationsEnabled() {
-        notificationsEnabledState.value = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        val explicitlyEnabled = getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
+            .getBoolean(KEY_NOTIFICATIONS_ENABLED, false)
+        notificationsEnabledState.value = explicitlyEnabled && NotificationManagerCompat.from(this).areNotificationsEnabled()
     }
 
     private fun openNotificationSettings() {
@@ -555,6 +542,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val PREFERENCES_NAME = "transversa_preferences"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val STATE_SELECTED_URI = "selected_media_uri"
         const val STATE_IS_SHARED_INPUT = "is_shared_input"
         const val TAG = "TransversaOutput"

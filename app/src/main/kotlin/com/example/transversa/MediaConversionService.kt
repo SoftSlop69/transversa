@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.FileProvider
 import com.transversa.core.media.AndroidMediaInspector
@@ -237,6 +238,10 @@ class MediaConversionService : Service() {
     }
 
     private fun postCompletionNotification(success: Boolean, action: String, fileName: String?, mimeType: String?, uri: Uri?) {
+        val optedIn = getSharedPreferences(NOTIFICATION_PREFERENCES, MODE_PRIVATE)
+            .getBoolean(KEY_NOTIFICATIONS_ENABLED, false)
+        if (!optedIn || !NotificationManagerCompat.from(this).areNotificationsEnabled()) return
+
         val title = when {
             !success -> getString(R.string.conversion_failed_title)
             action == ConversionJob.ACTION_SAVE -> getString(R.string.conversion_saved_title)
@@ -320,6 +325,8 @@ class MediaConversionService : Service() {
     private data class OutputSpec(val mimeType: String, val extension: String)
 
     companion object {
+        private const val NOTIFICATION_PREFERENCES = "transversa_preferences"
+        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val ACTION_PROGRESS = "com.example.transversa.action.CONVERSION_PROGRESS"
         const val ACTION_COMPLETED = "com.example.transversa.action.CONVERSION_COMPLETED"
         const val ACTION_FAILED = "com.example.transversa.action.CONVERSION_FAILED"
