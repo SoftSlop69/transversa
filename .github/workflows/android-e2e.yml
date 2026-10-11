@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Android E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  instrumentation-tests:
+    name: Instrumentation tests (API 35)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Linux FFmpeg build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential curl ffmpeg git make nasm ninja-build pkg-config python3 unzip xz-utils yasm
+
+      - name: Build app and instrumentation APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+
+      - name: Free runner disk space for Android emulator
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc
+          sudo apt-get clean
+          available_mb="$(df -Pm "$RUNNER_TEMP" | awk 'NR == 2 { print $4 }')"
+          echo "Available disk space before emulator startup: ${available_mb} MB"
+          if (( available_mb < 8000 )); then
+            echo "::error::Less than 8 GB is available for the Android emulator"
+            exit 1
+          fi
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Android end-to-end tests and record emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          force-avd-creation: true
+          emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: bash scripts/run-android-e2e.sh
+
+      - name: Upload per-test recordings and failure screenshots
+        if: always()
+        id: upload-recording
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-recordings-and-failures
+          path: app/build/recordings/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Add recording link to run summary
+        if: always() && steps.upload-recording.outputs.artifact-url != ''
+        env:
+          RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
+        run: |
+          {
+            echo '## Android E2E recordings and failure screenshots'
+            echo
+            echo "[Download per-test emulator recordings (MP4) and failure screenshots (PNG)](${RECORDING_URL})"
+            echo
+            echo 'Each test has its own MP4 recording. A PNG screenshot is included when that test fails.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload instrumentation test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-reports
+          path: |
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 7
