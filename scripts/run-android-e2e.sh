@@ -8,6 +8,19 @@ mkdir -p "$recording_dir"
 rm -f "$recording_dir"/*
 adb shell mkdir -p "$device_dir"
 
+# Install both APKs before recording. The connected-test Gradle task performs
+# installation as part of its setup, which otherwise leaves long blank lead-in
+# footage while each per-test Gradle invocation starts.
+app_apk=app/build/outputs/apk/debug/app-debug.apk
+test_apk=app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+if [[ ! -f "$app_apk" || ! -f "$test_apk" ]]; then
+  echo "Expected app and instrumentation APKs from the workflow build step." >&2
+  exit 1
+fi
+echo "Installing app and instrumentation APKs before starting screen recordings."
+adb install -r "$app_apk"
+adb install -r "$test_apk"
+
 tests=(
   navigationHistoryThemeDonateAndLicenseFlowsWork
   customPresetCanBeCreatedEditedAndDeleted
