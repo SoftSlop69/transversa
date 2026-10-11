@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <string name="app_name">Transversa</string>
+    <string name="tagline">The ultimate converter</string>
+    <string name="home_prompt">Choose a video, image, or audio file to get started.</string>
+    <string name="selected_media">Selected: %1$s</string>
+    <string name="select_media">Select media</string>
+    <string name="incomplete_notice">Preview and conversion are not implemented yet.</string>
+</resources>
+

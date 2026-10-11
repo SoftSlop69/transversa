@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package com.transversa.core.model
+
+enum class ConversionState {
+    IDLE,
+    PROBING,
+    READY,
+    PREPARING,
+    RUNNING,
+    FINALIZING,
+    COMPLETED,
+    FAILED,
+    CANCELLED,
+    INTERRUPTED,
+}
+
+enum class ConversionErrorCode {
+    UNSUPPORTED_INPUT,
+    PROBE_FAILED,
+    PREVIEW_UNAVAILABLE,
+    UNSUPPORTED_OUTPUT,
+    ENCODER_UNAVAILABLE,
+    HARDWARE_INIT_FAILED,
+    CONVERSION_FAILED,
+    CANCELLED,
+    LOW_STORAGE,
+    INPUT_PERMISSION_REVOKED,
+    DESTINATION_WRITE_FAILED,
+    SHARE_FAILED,
+    NATIVE_CRASH_OR_INTERRUPTION,
+}
+
