@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.NightsStay
@@ -303,19 +302,6 @@ fun InfoScreen(
                     state = donationState,
                     onDonate = onDonate,
                 )
-                if (donationState.isRentSubscriptionActive) {
-                    TextButton(
-                        onClick = {
-                            uriHandler.openUri(
-                                "https://play.google.com/store/account/subscriptions?sku=rent_monthly&package=com.example.transversa",
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shapes = ButtonDefaults.shapes(),
-                    ) {
-                        Text(stringResource(R.string.manage_subscription))
-                    }
-                }
                 val purchaseMessage = when (donationState.purchaseStatus) {
                     DonationPurchaseStatus.NONE -> null
                     DonationPurchaseStatus.PENDING -> R.string.donation_pending
@@ -415,13 +401,10 @@ private fun DonationTier(
     productId: String,
     offer: DonationOffer?,
     state: DonationBillingState,
-    isRecurring: Boolean = false,
     onDonate: (String) -> Unit,
 ) {
-    val isSubscription = isRecurring || offer?.productDetails?.productType == com.android.billingclient.api.BillingClient.ProductType.SUBS
     val displayedPrice = offer?.let {
-        it.billingPeriodLabel?.let { period -> stringResource(R.string.price_per_period, it.formattedPrice, period) }
-            ?: it.formattedPrice
+        it.formattedPrice
     } ?: stringResource(if (state.isLoading) R.string.loading_price else R.string.price_unavailable)
     OutlinedButton(
         onClick = { onDonate(productId) },
@@ -436,9 +419,6 @@ private fun DonationTier(
                     contentDescription = null,
                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)),
                 )
-                if (isSubscription) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.recurring_subscription))
-                }
                 Text(stringResource(title), modifier = Modifier.weight(1f))
                 Text(displayedPrice)
             }
@@ -448,13 +428,6 @@ private fun DonationTier(
             } else if (offer == null && !state.isLoading) {
                 Text(
                     stringResource(R.string.product_unavailable_description),
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (isSubscription) {
-                Text(
-                    stringResource(R.string.subscription_renewal_disclosure),
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                 )

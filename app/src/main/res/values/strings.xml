@@ -114,13 +114,9 @@
     <string name="share_app_text">Try Transversa, the media converter: %1$s</string>
     <string name="share_app_chooser_title">Share Transversa</string>
     <string name="support_options">Donate</string>
-    <string name="recurring_subscription">Recurring subscription</string>
     <string name="donation_beer">Buy me a beer</string>
     <string name="donation_donut">Fatten me up with a Donut</string>
     <string name="donation_socks">Keep me warm with some new socks</string>
-    <string name="price_per_period">%1$s / %2$s</string>
-    <string name="subscription_renewal_disclosure">Renews automatically each month until canceled. Includes ongoing access to the Transversa Club clubhouse.</string>
-    <string name="manage_subscription">Manage or cancel subscription</string>
     <string name="loading_price">Loading…</string>
     <string name="price_unavailable">Unavailable</string>
     <string name="product_unavailable_description">This item isn’t currently available from Google Play.</string>
