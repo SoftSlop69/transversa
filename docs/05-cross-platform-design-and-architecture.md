@@ -50,7 +50,7 @@ Maintain a versioned design-token source (e.g. JSON in `design/tokens/`) contain
 | Shared intent | Android | iOS |
 |---|---|---|
 | Primary action | Material 3 button | SwiftUI prominent button |
-| Select format | Material exposed dropdown/sheet | SwiftUI Picker/Menu/sheet |
+| Select format | Material 3 single-choice segmented buttons | SwiftUI Picker/Menu/sheet |
 | Preset settings | Material lists and switches | SwiftUI Form and Toggle |
 | Navigation | Android Navigation + system back | NavigationStack + native back |
 | Share | Android sharesheet | UIActivityViewController/ShareLink |
@@ -88,7 +88,7 @@ Use a documented state machine: `Idle → Probing → Ready → Preparing → Ru
 
 ## 7. Source, compliance and test strategy
 
-GPL-3.0-or-later is the planned project license; FFmpeg with x264/x265 is GPL-enabled and must be audited per platform. Before App Store distribution, explicitly review GPL obligations against Apple distribution and signing conditions, all third-party licenses, and codec patents. Do not claim legal clearance from this architecture plan.
+GPL-3.0-or-later is the project license; FFmpeg with x264 is GPL-enabled and Kvazaar is BSD-3-Clause. Audit the exact combination per platform. Before App Store distribution, explicitly review GPL obligations against Apple distribution and signing conditions, all third-party licenses, and codec patents. Do not claim legal clearance from this architecture plan.
 
 - Shared unit tests for models, defaults, presets, migration, validation and job state.
 - Android UI/integration tests for Material interactions, SAF, MediaCodec and foreground behavior.

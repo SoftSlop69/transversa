@@ -20,6 +20,10 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Install Linux FFmpeg build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential curl git make nasm ninja-build pkg-config python3 unzip xz-utils yasm
       - name: Assemble Android debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
 

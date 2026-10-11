@@ -14,8 +14,10 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The in-process FFmpeg bridge is currently built for arm64-v8a only.
+        // Keep the app package on the same ABI so Android Studio/emulators do
+        // not select x86_64 and install an app without its native converter.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildFeatures {
@@ -43,12 +45,15 @@ dependencies {
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.coil.compose)
+    implementation(libs.google.play.billing)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

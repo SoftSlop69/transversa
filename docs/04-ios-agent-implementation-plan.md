@@ -6,7 +6,7 @@
 
 ## 0. Agent mandate
 
-Build a fully functional, offline-first iOS companion with native SwiftUI presentation. Do not use Compose Multiplatform UI. Reuse platform-neutral Kotlin domain logic through KMP, but implement iOS platform adapters and SwiftUI screens natively. Do not replace mandatory FFmpeg x264/x265 software encoders without an explicit project decision. Do not claim background conversion is guaranteed after iOS suspension. Keep licensing and Apple distribution compatibility as a hard release gate.
+Build a fully functional, offline-first iOS companion with native SwiftUI presentation. Do not use Compose Multiplatform UI. Reuse platform-neutral Kotlin domain logic through KMP, but implement iOS platform adapters and SwiftUI screens natively. Do not replace mandatory FFmpeg x264/Kvazaar software encoders without an explicit project decision. Do not claim background conversion is guaranteed after iOS suspension. Keep licensing and Apple distribution compatibility as a hard release gate.
 
 ## 1. MVP behavior parity
 
@@ -14,7 +14,7 @@ Build a fully functional, offline-first iOS companion with native SwiftUI presen
 - Preview original video/audio with AVKit and images with native image presentation. Display metadata.
 - Default video: MP4/H.264/AAC; default image: PNG; default audio: MP3. HEVC/H.265 is optional.
 - Configure output codec/container, resolution/quality/bitrate and relevant media-specific settings, constrained by tested capabilities.
-- Support editable/resettable factory default presets plus create/edit/duplicate/delete user presets; use the same shared preset schema as Android.
+- Support editable/resettable factory **Simple** presets plus create/edit/duplicate/delete user presets; use the same shared preset schema as Android.
 - **No Convert button.** Save requests destination/filename before starting conversion. Share initiates conversion to a private temporary file and opens native share sheet.
 - After successful conversion, Save or Share existing output without re-encoding if still available; show progress, cancel, errors and cleanup.
 - No network requirement, accounts, ads, watermarks or cloud upload.
@@ -29,11 +29,11 @@ Build a fully functional, offline-first iOS companion with native SwiftUI presen
 
 ## 3. iOS native engine implementation
 
-1. Pin FFmpeg, x264, x265, MP3 encoder dependencies and Apple toolchain versions. Build device/simulator-compatible libraries and package them correctly.
+1. Pin FFmpeg, x264, Kvazaar, MP3 encoder dependencies and Apple toolchain versions. Build device/simulator-compatible libraries and package them correctly.
 2. Implement a safe C/Objective-C/Swift bridging layer around FFmpeg APIs or an embedded executable approach only if technically and policy compliant; avoid brittle shell-process assumptions on iOS.
 3. Implement input staging, probing, stream mapping, output validation, atomic file handling, progress callbacks, cancellation and error classification.
-4. Probe `h264_videotoolbox`/`hevc_videotoolbox` per device; prefer tested hardware encoding in Auto mode and retry with `libx264`/`libx265` where supported. Respect software-only mode. Ensure video defaults to MP4/H.264/AAC and HEVC is explicit.
-5. Provide encoder-specific setting translations: VideoToolbox bitrate/quality versus x264/x265 CRF/preset. Avoid promising unsupported knobs.
+4. Probe `h264_videotoolbox`/`hevc_videotoolbox` per device; prefer tested hardware encoding in Auto mode and retry with `libx264`/`libkvazaar` where supported. Respect software-only mode. Ensure video defaults to MP4/H.264/AAC and HEVC is explicit.
+5. Provide encoder-specific setting translations: VideoToolbox bitrate/quality versus x264 CRF/preset and Kvazaar bitrate or documented encoder parameters. Avoid promising unsupported knobs.
 6. Verify actual FFmpeg configure flags and codecs. Build must not contain `--enable-nonfree`; keep complete source/build provenance.
 
 ## 4. SwiftUI screen deliverables

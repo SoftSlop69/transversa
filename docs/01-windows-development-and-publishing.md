@@ -2,20 +2,20 @@
 
 ## Open-source licensing policy (mandatory)
 
-**Project license: GNU GPL version 3 or later (`GPL-3.0-or-later`).** All project-owned application code, JNI integration code, and build scripts should be released under GPL-3.0-or-later (subject to any clearly documented third-party exceptions). Bundled FFmpeg is built with `--enable-gpl` and includes both **libx264** and **libx265**; this is a GPL build, **not** an LGPL-only build. Check the pinned FFmpeg, x264, and x265 versions and their actual license notices before each release. Do not enable `--enable-nonfree` or include incompatible nonfree libraries.
+**Project license: GNU GPL version 3 or later (`GPL-3.0-or-later`).** All project-owned application code, JNI integration code, and build scripts should be released under GPL-3.0-or-later (subject to clearly documented third-party notices). AndroidX dependencies are Apache-2.0; GPLv3 is compatible with Apache-2.0. The bundled FFmpeg build enables GPL components through `libx264` (GPL-2.0-or-later) and uses Kvazaar (BSD-3-Clause) for software HEVC. Kvazaar replaces x265, whose GPL-2-only terms are unsuitable for this combined GPLv3/Apache-2.0 configuration. Check exact pinned sources and notices before each release. Do not enable `--enable-nonfree` or include incompatible nonfree libraries.
 
-**Required video encoders:** `h264_mediacodec` and `hevc_mediacodec` where supported by the device and build, plus `libx264` and `libx265` as software encoders. Default video output remains **MP4/H.264/AAC**; H.265/HEVC is a selectable video option, not the default. In automatic mode prefer a validated hardware encoder and fall back to `libx264` for H.264 or `libx265` for HEVC if the device or hardware conversion fails. Respect user-selected software-only mode. Hardware and software encoders have different quality options: use bitrate/codec-specific controls for MediaCodec, CRF/preset for x264/x265. Test fallback on physical devices.
+**Required video encoders:** `h264_mediacodec` and `hevc_mediacodec` where supported by the device and build, plus `libx264` and `libkvazaar` as software encoders. Default video output remains **MP4/H.264/AAC**; H.265/HEVC is a selectable video option, not the default. In automatic mode prefer a validated hardware encoder and fall back to `libx264` for H.264 or `libkvazaar` for HEVC if the device or hardware conversion fails. Respect user-selected software-only mode. Use bitrate/codec-specific controls for MediaCodec and x264 CRF/preset controls; configure Kvazaar with bitrate or its documented encoder parameters. Test fallback on physical devices.
 
 **Release and compliance requirements:**
 
-1. Ship `LICENSE` with the full GPLv3 text and `SPDX-License-Identifier: GPL-3.0-or-later` for project-owned code, plus `THIRD_PARTY_LICENSES.md`, relevant FFmpeg/x264/x265 licenses, copyright notices, and an in-app About/Licenses screen.
-2. Publish complete corresponding source for **the exact distributed app and native binaries**, including pinned FFmpeg/x264/x265 sources or compliant source delivery, patches, JNI code, Gradle/CMake/configure flags, NDK/toolchain versions, and installation/build instructions. Do not rely solely on upstream links or a generic source repository.
+1. Ship `LICENSE` with the full GPLv3 text and `SPDX-License-Identifier: GPL-3.0-or-later` for project-owned code, plus `THIRD_PARTY_LICENSES.md`, relevant FFmpeg/x264/Kvazaar licenses, copyright notices, and an in-app About/Licenses screen.
+2. Publish complete corresponding source for **the exact distributed app and native binaries**, including pinned FFmpeg/x264/Kvazaar sources or compliant source delivery, patches, JNI code, Gradle/CMake/configure flags, NDK/toolchain versions, and installation/build instructions. Do not rely solely on upstream links or a generic source repository.
 3. Review every third-party dependency (including Android libraries and any binary SDKs) for GPLv3 compatibility. Do not incorporate proprietary or incompatible components into the combined GPL work without a documented legal basis. Android system APIs may be used under applicable system-library exceptions; evaluate distribution-specific details.
-4. Archive release artifacts, license inventory, source revision, native binary hashes, FFmpeg build configuration and encoder inventory. Verify `--enable-gpl` and `--enable-libx264` / `--enable-libx265` where appropriate, and verify `--enable-nonfree` is absent.
+4. Archive release artifacts, license inventory, source revision, native binary hashes, FFmpeg build configuration and encoder inventory. Verify `--enable-gpl` and `--enable-libx264` / `--enable-libkvazaar` where appropriate, and verify `--enable-nonfree` is absent.
 5. Check Google Play terms and current policies for GPL distribution, and ensure recipients can obtain corresponding source and exercise GPL rights. Review codec patent issues separately from copyright licensing.
 6. Reference authoritative guidance: https://ffmpeg.org/legal.html , https://www.gnu.org/licenses/gpl-3.0.html , and https://www.gnu.org/licenses/gpl-faq.html . Obtain a distribution-focused license review before release.
 
-**Licensing nuance:** GPLv3-or-later is the recommended uniform project license, not a claim that FFmpeg itself is automatically relicensed as GPLv3-or-later. The bundled FFmpeg/x264/x265 components retain their own applicable GPL notices and versions. Confirm the exact combination is compatible.
+**Licensing nuance:** GPLv3-or-later is the project license, not a claim that FFmpeg itself is automatically relicensed as GPLv3-or-later. FFmpeg and x264 retain their applicable GPL notices; Kvazaar retains its BSD-3-Clause notice. The combined Android dependency selection is intended to be compatible with GPLv3 and Apache-2.0 AndroidX libraries. Review the exact shipped combination and distribution obligations before release.
 
 ## 1. Purpose
 
@@ -60,9 +60,15 @@ If `adb` is not on `PATH`, call it by its full path as shown. If the build fails
 
 The project should contain a dedicated `:ffmpeg-bridge` Android library module exposing a typed Kotlin interface to a native JNI adapter. The bridge loads the bundled FFmpeg libraries and runs conversions in-process; **do not assume a desktop `ffmpeg` executable can simply be packaged and invoked as a process on Android**. Prefer a maintained, auditable Android FFmpeg integration or a reproducible self-built FFmpeg + JNI runner. The old FFmpegKit distribution is retired; do not depend on unmaintained binaries without review.
 
-The FFmpeg build must include the demuxers, muxers, codecs, filters, parsers, and protocols needed for the supported media types. Include `h264_mediacodec` where supported, the native `aac` encoder, PNG encoding, and a working MP3 encoder (`libmp3lame` if licensed/bundled). Bundle `libx264` and `libx265` as mandatory software encoding fallbacks; keep MediaCodec hardware encoding where supported.
+The FFmpeg build must include the demuxers, muxers, codecs, filters, parsers, and protocols needed for the supported media types. Include `h264_mediacodec` where supported, the native `aac` encoder, PNG encoding, and a working MP3 encoder (`libmp3lame` if licensed/bundled). Bundle `libx264` and `libkvazaar` as mandatory software encoding fallbacks; keep MediaCodec hardware encoding where supported.
 
-### 4.2 Recommended reproducible native build
+### 4.2 Reproducible native build in this repository
+
+The repository contains a pinned Android build recipe in [`docs/ffmpeg-android-build.md`](ffmpeg-android-build.md). Android Gradle builds invoke it through `:ffmpeg-bridge:buildFfmpegAndroid` in WSL2; it cross-compiles `arm64-v8a` static libraries and links them into the JNI bridge. The Kotlin bridge currently exposes in-process local-path conversions for PNG images, 192 kb/s MP3 audio, and MP4/H.264/AAC video (AAC is included when the source has audio). Converted files are checked for a non-empty expected stream before their destination is committed. JPEG-to-PNG, WAV-to-MP3, and video-to-H.264/AAC MP4 have passed a smoke check on the Android emulator. The app layer remains responsible for staging `content://` inputs and running conversion off the UI thread. Progress/cancellation, device hardware encoder selection/fallback, end-to-end app-flow coverage, and physical-device testing are still required before these paths satisfy the full conversion specification.
+
+The recipe is Android-only. Shared codec source pins are recorded for future iOS work, but iOS requires its own build, bridge, and license review on macOS.
+
+### 4.3 Native build requirements and release checks
 
 1. Install WSL2 and Ubuntu (`wsl --install -d Ubuntu`) if you plan to build FFmpeg yourself.
 2. Install Ubuntu build dependencies (e.g., `git`, `make`, `ninja-build`, `cmake`, `pkg-config`, `nasm`, `yasm`, `python3`, `clang` as needed by the chosen recipe).
@@ -76,7 +82,7 @@ The FFmpeg build must include the demuxers, muxers, codecs, filters, parsers, an
 
 **Critical distinction:** Android's MediaCodec APIs can be available even when the particular FFmpeg build does not expose MediaCodec **encoding**. Check both build capabilities and device hardware. Do not promise hardware encoding for every codec/device.
 
-### 4.3 Verify the bundled engine
+### 4.4 Verify the bundled engine
 
 Provide an in-app developer diagnostics screen or instrumentation test that enumerates:
 
@@ -178,7 +184,7 @@ For Play distribution, validate the AAB using Android Studio's **Analyze APK/App
 1. Choose a permanent application ID (for example, `com.yourcompany.mediaconverter`); it is difficult or impossible to change after publication.
 2. Set app name, icon, adaptive icon, version code/version name, minimum and target SDK, supported ABIs, and app theme.
 3. Check the current Play target API requirement and any special requirements for foreground services, Android 13+ notifications, and media-related permissions. Declare only the permissions actually needed.
-4. Review GPLv3 compatibility for the complete distribution, including FFmpeg, libx264, libx265 and other libraries. Fulfill source, notice and redistribution obligations and obtain a release licensing review.
+4. Review GPLv3 compatibility and obligations for the complete distribution, including FFmpeg, libx264, Kvazaar and other libraries. Fulfill source, notice and redistribution obligations and obtain a release licensing review.
 5. Prepare a privacy policy that accurately describes offline processing, local file access, temporary cache retention, and whether telemetry/crash reporting is enabled.
 6. Prepare screenshots, feature graphic, short/full descriptions, category, support contact, content rating, target audience, Data safety answers, and required policy declarations.
 7. Verify that the app does not upload user media unless explicitly added and disclosed.
@@ -250,6 +256,6 @@ android-media-converter/
 
 **Migration rule:** Existing Android-only code remains valid during an incremental KMP extraction. Move only portable pure Kotlin into `shared/commonMain`, use `androidMain` and `iosMain` for platform-specific adapters, and keep Android `Activity`, services, Room integration and SAF in Android-specific modules. Use Kotlin/Native framework exports for Swift interop, with a thin Swift adapter to expose observable state to SwiftUI. The iOS application requires Xcode/macOS to build, sign and distribute; Windows can continue to build Android and develop/test common Kotlin logic.
 
-**Platform-specific media:** Android uses MediaCodec and Android storage/share APIs; iOS uses VideoToolbox where supported, FFmpeg built for iOS, document import/export, QuickLook/AVKit preview, and `ShareLink`/`UIActivityViewController`. Hardware encoder selection and progress/cancel must be implemented and tested separately on each platform. GPL-enabled FFmpeg including libx264/libx265 remains a mandatory compliance consideration on iOS as well; consult `04-ios-agent-implementation-plan.md` before publishing, especially regarding GPL distribution, code signing, App Store terms and codec patents.
+**Platform-specific media:** Android uses MediaCodec and Android storage/share APIs; iOS uses VideoToolbox where supported, FFmpeg built for iOS, document import/export, QuickLook/AVKit preview, and `ShareLink`/`UIActivityViewController`. Hardware encoder selection and progress/cancel must be implemented and tested separately on each platform. Any GPL-enabled FFmpeg configuration including libx264 remains a compliance consideration on iOS; separately validate Kvazaar's iOS build and licensing, and consult `04-ios-agent-implementation-plan.md` before publishing, especially regarding GPL distribution, code signing, App Store terms and codec patents.
 
 **Android acceptance additions:** Common Kotlin code must compile and pass common tests without Android dependencies. Android UI must preserve Material 3 conventions and continue to pass existing conversion and sharing tests after extraction. Never block the Android release on completion of iOS work unless shared-code changes break Android behavior.

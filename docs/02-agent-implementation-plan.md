@@ -4,24 +4,24 @@
 
 Implement a native, offline-first Transversa media conversion app in Kotlin/Jetpack Compose using an embedded FFmpeg engine. Follow this specification rather than inventing product behavior. Use maintained dependencies, pin versions, write tests, and document decisions/limitations. Avoid shipping placeholder conversion functionality. If an FFmpeg build or license constraint blocks a codec, surface the limitation clearly and propose a compliant alternative rather than silently changing the required output.
 
-**Definition of done:** On a supported physical Android device, a user can receive or select a video, image, or audio file; preview it; optionally choose/edit/save a preset; tap **Save** or **Share** (no Convert button); watch conversion progress; and receive a valid MP4/H.264/AAC, PNG, or MP3 file respectively. Conversions work offline, cancel safely, and use hardware acceleration when compatible with software fallback through bundled libx264/libx265 when compatible.
+**Definition of done:** On a supported physical Android device, a user can receive or select a video, image, or audio file; preview it; optionally choose/edit/save a preset; tap **Save** or **Share** (no Convert button); watch conversion progress; and receive a valid MP4/H.264/AAC, PNG, or MP3 file respectively. Conversions work offline, cancel safely, and use hardware acceleration when compatible with software fallback through bundled libx264/libkvazaar when compatible.
 
 ## Open-source licensing policy (mandatory)
 
-**Project license: GNU GPL version 3 or later (`GPL-3.0-or-later`).** All project-owned application code, JNI integration code, and build scripts should be released under GPL-3.0-or-later (subject to any clearly documented third-party exceptions). Bundled FFmpeg is built with `--enable-gpl` and includes both **libx264** and **libx265**; this is a GPL build, **not** an LGPL-only build. Check the pinned FFmpeg, x264, and x265 versions and their actual license notices before each release. Do not enable `--enable-nonfree` or include incompatible nonfree libraries.
+**Project license: GNU GPL version 3 or later (`GPL-3.0-or-later`).** All project-owned application code, JNI integration code, and build scripts should be released under GPL-3.0-or-later (subject to clearly documented third-party notices). AndroidX dependencies are Apache-2.0; GPLv3 is compatible with Apache-2.0. The bundled FFmpeg build enables GPL components through `libx264` (GPL-2.0-or-later) and uses Kvazaar (BSD-3-Clause) for software HEVC. Kvazaar replaces x265, whose GPL-2-only terms are unsuitable for this combined GPLv3/Apache-2.0 configuration. Check exact pinned sources and notices before each release. Do not enable `--enable-nonfree` or include incompatible nonfree libraries.
 
-**Required video encoders:** `h264_mediacodec` and `hevc_mediacodec` where supported by the device and build, plus `libx264` and `libx265` as software encoders. Default video output remains **MP4/H.264/AAC**; H.265/HEVC is a selectable video option, not the default. In automatic mode prefer a validated hardware encoder and fall back to `libx264` for H.264 or `libx265` for HEVC if the device or hardware conversion fails. Respect user-selected software-only mode. Hardware and software encoders have different quality options: use bitrate/codec-specific controls for MediaCodec, CRF/preset for x264/x265. Test fallback on physical devices.
+**Required video encoders:** `h264_mediacodec` and `hevc_mediacodec` where supported by the device and build, plus `libx264` and `libkvazaar` as software encoders. Default video output remains **MP4/H.264/AAC**; H.265/HEVC is a selectable video option, not the default. In automatic mode prefer a validated hardware encoder and fall back to `libx264` for H.264 or `libkvazaar` for HEVC if the device or hardware conversion fails. Respect user-selected software-only mode. Hardware and software encoders have different quality options: use bitrate/codec-specific controls for MediaCodec and x264 CRF/preset controls; configure Kvazaar with bitrate or its documented encoder parameters. Test fallback on physical devices.
 
 **Release and compliance requirements:**
 
-1. Ship `LICENSE` with the full GPLv3 text and `SPDX-License-Identifier: GPL-3.0-or-later` for project-owned code, plus `THIRD_PARTY_LICENSES.md`, relevant FFmpeg/x264/x265 licenses, copyright notices, and an in-app About/Licenses screen.
-2. Publish complete corresponding source for **the exact distributed app and native binaries**, including pinned FFmpeg/x264/x265 sources or compliant source delivery, patches, JNI code, Gradle/CMake/configure flags, NDK/toolchain versions, and installation/build instructions. Do not rely solely on upstream links or a generic source repository.
+1. Ship `LICENSE` with the full GPLv3 text and `SPDX-License-Identifier: GPL-3.0-or-later` for project-owned code, plus `THIRD_PARTY_LICENSES.md`, relevant FFmpeg/x264/Kvazaar licenses, copyright notices, and an in-app About/Licenses screen.
+2. Publish complete corresponding source for **the exact distributed app and native binaries**, including pinned FFmpeg/x264/Kvazaar sources or compliant source delivery, patches, JNI code, Gradle/CMake/configure flags, NDK/toolchain versions, and installation/build instructions. Do not rely solely on upstream links or a generic source repository.
 3. Review every third-party dependency (including Android libraries and any binary SDKs) for GPLv3 compatibility. Do not incorporate proprietary or incompatible components into the combined GPL work without a documented legal basis. Android system APIs may be used under applicable system-library exceptions; evaluate distribution-specific details.
-4. Archive release artifacts, license inventory, source revision, native binary hashes, FFmpeg build configuration and encoder inventory. Verify `--enable-gpl` and `--enable-libx264` / `--enable-libx265` where appropriate, and verify `--enable-nonfree` is absent.
+4. Archive release artifacts, license inventory, source revision, native binary hashes, FFmpeg build configuration and encoder inventory. Verify `--enable-gpl` and `--enable-libx264` / `--enable-libkvazaar` where appropriate, and verify `--enable-nonfree` is absent.
 5. Check Google Play terms and current policies for GPL distribution, and ensure recipients can obtain corresponding source and exercise GPL rights. Review codec patent issues separately from copyright licensing.
 6. Reference authoritative guidance: https://ffmpeg.org/legal.html , https://www.gnu.org/licenses/gpl-3.0.html , and https://www.gnu.org/licenses/gpl-faq.html . Obtain a distribution-focused license review before release.
 
-**Licensing nuance:** GPLv3-or-later is the recommended uniform project license, not a claim that FFmpeg itself is automatically relicensed as GPLv3-or-later. The bundled FFmpeg/x264/x265 components retain their own applicable GPL notices and versions. Confirm the exact combination is compatible.
+**Licensing nuance:** GPLv3-or-later is the project license, not a claim that FFmpeg itself is automatically relicensed as GPLv3-or-later. FFmpeg and x264 retain their applicable GPL notices; Kvazaar retains its BSD-3-Clause notice. Review the exact shipped combination and distribution obligations before release.
 
 ## 1. Scope
 
@@ -33,7 +33,7 @@ Implement a native, offline-first Transversa media conversion app in Kotlin/Jetp
 - Preview: Media3 video/audio playback and image display; show filename, dimensions, duration, size where available.
 - Defaults: video `MP4 + H.264 + AAC`; image `PNG`; audio `MP3`.
 - Settings screen per media type; choose output format/codec and applicable quality, resize, bitrate, resolution, frame rate, audio channels, etc., subject to engine support.
-- Built-in **Default** preset per media type; reset to factory defaults. User presets support create, load, rename, edit, duplicate, delete.
+- Built-in **Simple** preset per media type; reset to factory defaults. User presets support create, load, rename, edit, duplicate, delete.
 - Automatic hardware H.264 encoding through FFmpeg MediaCodec where supported; platform software fallback where available; otherwise clear unsupported-device error. Do not equate hardware decode availability with hardware encode availability.
 - Save: launch system `ACTION_CREATE_DOCUMENT` first, then convert and commit to selected URI.
 - Share: convert to private cache, then open native Android share sheet using `FileProvider` and MIME-aware `ACTION_SEND`.
@@ -43,7 +43,7 @@ Implement a native, offline-first Transversa media conversion app in Kotlin/Jetp
 
 ### Explicitly out of scope for MVP
 
-Batch conversion, trimming/editing, cloud processing, cloud storage integrations, conversion history UI, account/login, advertising, watermarking, media library indexing, remote APIs, and conversion queues. Do not add a separate Convert action.
+Batch conversion, trimming/editing, cloud processing, cloud storage integrations, account/login, advertising, watermarking, media library indexing, remote APIs, and conversion queues. Do not add a separate Convert action. **Product decision update:** conversion history UI is now part of the Android MVP, as explicitly requested by the product owner on 2026-10-10.
 
 ## 2. Nonfunctional requirements
 
@@ -55,7 +55,7 @@ Batch conversion, trimming/editing, cloud processing, cloud storage integrations
 - **Recoverable:** after process death, mark interrupted jobs as interrupted and offer retry; do not claim native work resumed automatically.
 - **Accessible:** Material 3, screen-reader labels, contrast, large text, accessible progress.
 - **Internationalizable:** string resources and locale-safe numeric formatting.
-- **Licensing:** GPL-3.0-or-later for project-owned code; GPL-enabled FFmpeg with libx264 and libx265 required; prohibit --enable-nonfree. Publish corresponding sources, licenses, and build flags.
+- **Licensing:** GPL-3.0-or-later for project-owned code; GPL-enabled FFmpeg with libx264 and BSD-3-Clause Kvazaar; prohibit --enable-nonfree. Kvazaar replaces GPL-2-only x265 to maintain compatibility with the Apache-2.0 AndroidX dependencies. Publish corresponding sources, licenses, and build flags.
 
 ## 3. Technical architecture
 
@@ -143,7 +143,9 @@ data class VideoSettings(
     val videoCodec: String = "h264",
     val audioCodec: String = "aac",
     val acceleration: AccelerationMode = AccelerationMode.AUTO,
-    val softwareCrf: Int = 23,
+    val x264Crf: Int = 23,
+    val kvazaarBitrateKbps: Int? = null,
+    val kvazaarParameters: Map<String, String> = emptyMap(),
     val hardwareBitrateKbps: Int? = null,
     val audioBitrateKbps: Int = 192,
     val resolution: ResolutionChoice = ResolutionChoice.Original,
@@ -174,7 +176,7 @@ Define `ResolutionChoice`, `FrameRateChoice`, and `ResizeChoice` as serializable
 
 `PresetEntity(id, mediaType, name, isBuiltIn, settingsSchemaVersion, settingsJson, createdAt, updatedAt)` with unique `(mediaType, name)` constraint. `ConversionJobEntity(id, inputUri, mediaType, action, state, presetSnapshotJson, outputCachePath, destinationUri, startedAt, updatedAt, errorCode)` if durable job recovery is implemented. Do not persist transient URI grants as if they were permanent.
 
-`Default` is a reserved built-in preset for each media type. Users may modify its active settings, but **Restore factory defaults** restores canonical defaults. Built-in presets cannot be renamed/deleted. Custom presets can. Edits are tracked as dirty until saved; selecting another preset prompts to discard/save when needed. Preset settings are snapshotted at conversion start.
+`Simple` is the reserved built-in preset for each media type and cannot be deleted. Users may modify its active settings, but **Restore factory defaults** restores canonical defaults. Preset names can be edited from the preset editor; every preset except `Simple` can be deleted. The Android **Add preset** flow creates a named copy of the active preset and its settings. Edits are tracked as dirty until saved; selecting another preset prompts to discard/save when needed. Preset settings are snapshotted at conversion start.
 
 ## 5. Screen specifications
 
@@ -184,7 +186,8 @@ States: `Empty`, `Inspecting`, `Ready`, `Converting`, `Completed`, `Failed`, `Ca
 
 - Empty: prominent **Select file**; explain Android Share/Open with integration.
 - Inspecting: spinner, file name if known, error recovery.
-- Ready: large preview, metadata, current preset summary, **Settings** button, two equally prominent **Save** and **Share** buttons. **No Convert button**.
+- Ready: large preview with its media information in one connected, expandable Material 3 card. Information starts collapsed; expanding it reveals metadata within the same card. Show the current preset summary and two equally prominent **Save** and **Share** buttons. **No Convert button**.
+- Show the recent presets as a Material 3 single-choice segmented button row; the selected segment is the active/last-used preset and the final pencil-icon segment opens Presets. Visually distinguish and label the built-in **Simple** preset as the default.
 - Converting: preview remains; progress percentage when measurable, elapsed time, ETA if reliable, destination action label, **Cancel**; prevent duplicate job launches.
 - Completed: success indication, output size/format, **Save** and **Share** actions both available without re-encoding, plus **Choose another file**.
 - Failed: concise actionable error and retry; no fake success or share sheet.
@@ -199,18 +202,25 @@ States: `Empty`, `Inspecting`, `Ready`, `Converting`, `Completed`, `Failed`, `Ca
 
 ### 5.3 Settings screen
 
-- Show active preset selector at top and relevant fields only.
+- Show active preset selector at top and relevant fields only. Format and codec choices use Material 3 single-choice segmented buttons.
 - Video: container, codec, hardware mode, quality/bitrate, resolution, frame rate, audio codec/bitrate, audio inclusion toggle. Hide/disable unsupported combinations with explanation.
 - Image: format, dimensions/resize mode, transparency behavior; only show quality/compression controls where meaningful.
 - Audio: format, bitrate/quality, sample rate, channel mode.
 - Actions: Save changes, Save as new preset, Duplicate, Rename/Delete for custom presets, Restore factory defaults for built-in preset.
 - Persist changes intentionally; do not overwrite saved preset on every slider movement.
 
+### 5.4 App navigation, history, and preset catalog
+
+- Provide three top-level destinations: **Convert**, **History**, and **Presets**. Preset editing is a fourth screen opened from the Presets list.
+- Every destination has a title and a top-left back arrow. Use Android Navigation Compose and the system back behavior.
+- History uses Material 3 list items, newest first. Keep a local record of successful Save and Share conversions, with source/output names, media kind, action, and time. Each row has a delete action; provide a clear-all action.
+- Presets lists all media kinds using Material 3 list items. Tapping a row opens its editor; built-in **Simple** cannot be deleted, while other presets can. The list includes an Add preset action.
+
 ## 6. Save and Share workflows
 
 ### 6.1 Save — picker first
 
-1. User taps Save in Ready.
+1. User taps Save in Ready. Open the picker in the last save directory when that location is still available; remember the chosen directory for the next save.
 2. Construct proposed output filename and MIME type from selected settings.
 3. Launch `ACTION_CREATE_DOCUMENT` (or Compose Activity Result contract `CreateDocument`) with a suggested filename.
 4. If picker is cancelled, remain Ready; do not convert.
@@ -250,7 +260,7 @@ The planner generates a typed `ConversionPlan` with explicit input/output paths,
 
 **Illustrative CLI-equivalent commands (not an instruction to spawn a desktop executable):**
 
-Software fallback is mandatory: use `libx264` for H.264 and `libx265` for H.265/HEVC. Hardware MediaCodec remains the preferred AUTO path where validated. If hardware fails, retry using software with a fresh output file and correctly mapped quality settings.
+Software fallback is mandatory: use `libx264` for H.264 and `libkvazaar` for H.265/HEVC. Hardware MediaCodec remains the preferred AUTO path where validated. If hardware fails, retry using software with a fresh output file and correctly mapped encoder-specific settings.
 
 Video software H.264 fallback:
 
@@ -261,7 +271,7 @@ ffmpeg -i input.mov -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 192k outpu
 Optional H.265/HEVC software output:
 
 ```bash
-ffmpeg -i input.mov -c:v libx265 -crf 28 -preset medium -c:a aac -b:a 192k output.mp4
+ffmpeg -i input.mov -c:v libkvazaar -b:v 5M -c:a aac -b:a 192k output.mp4
 ```
 
 Video hardware:
@@ -319,7 +329,7 @@ Persist minimal job metadata for crash recovery. On restart, detect interrupted 
 
 Define stable error codes: `UNSUPPORTED_INPUT`, `PROBE_FAILED`, `PREVIEW_UNAVAILABLE`, `UNSUPPORTED_OUTPUT`, `ENCODER_UNAVAILABLE`, `HARDWARE_INIT_FAILED`, `CONVERSION_FAILED`, `CANCELLED`, `LOW_STORAGE`, `INPUT_PERMISSION_REVOKED`, `DESTINATION_WRITE_FAILED`, `SHARE_FAILED`, `NATIVE_CRASH_OR_INTERRUPTION`.
 
-Show friendly messages with Retry/Change settings/Choose file where applicable. Preserve diagnostic codes in logs. A preview failure must not automatically block conversion. A hardware failure in AUTO mode must retry with bundled `libx264` (or `libx265` for HEVC), report the fallback, and preserve cancellation semantics.
+Show friendly messages with Retry/Change settings/Choose file where applicable. Preserve diagnostic codes in logs. A preview failure must not automatically block conversion. A hardware failure in AUTO mode must retry with bundled `libx264` (or `libkvazaar` for HEVC), report the fallback, and preserve cancellation semantics.
 
 ## 11. Testing strategy
 
@@ -367,7 +377,7 @@ Use small licensed fixtures for MP4/MOV/MKV, MP3/WAV/FLAC, JPEG/PNG/WebP, video 
 
 **Tasks:** Pin/build native FFmpeg, JNI bridge, codec capability query, conversion planner, basic default conversions, conditional compliant software fallback, progress/cancel, native diagnostics.
 
-**Acceptance:** Real valid MP4/H.264/AAC, PNG, and MP3 outputs produced on arm64 device; hardware encoding attempted when supported; libx264/libx265 fallback tested; license inventory generated.
+**Acceptance:** Real valid MP4/H.264/AAC, PNG, and MP3 outputs produced on arm64 device; hardware encoding attempted when supported; libx264/libkvazaar fallback tested; license inventory generated.
 
 ### Milestone D — Settings and presets
 
@@ -413,11 +423,18 @@ Commit at milestone boundaries, keep CI green, and provide a brief status report
 ## 14. Open decisions to resolve before shipping
 
 1. **App identity:** final name, package/application ID, icon, and minimum supported Android version.
-2. **Licensing:** GPL-3.0-or-later application plus GPL-enabled FFmpeg with mandatory libx264 and libx265. Verify all third-party licenses and include full corresponding source with releases.
+2. **Licensing:** GPL-3.0-or-later application plus GPL-enabled FFmpeg with libx264 and BSD-3-Clause Kvazaar. Verify all third-party licenses and include full corresponding source with releases.
 3. **Native FFmpeg distribution:** maintained wrapper vs self-built JNI engine; verify hardware encoder availability, source/build reproducibility, and ABI coverage.
 4. **Settings breadth:** MVP may expose only tested output formats, even though architecture supports additional formats later.
 5. **Cache policy:** finalize quota/retention based on real file sizes and share-target behavior.
 6. **Analytics:** default to none; if added later, update privacy/data safety declarations.
+
+## Android Info and support screen
+
+- Provide an Info destination with application name/version and complete in-app license text for the app and included third-party software.
+- Its Donate action opens a sheet with the app-store share action first, followed by three one-time Google Play donation products.
+- Use product IDs `donation_small`, `donation_medium`, and `donation_large`; configure the final amounts and currency in Play Console before release. Display Play's localized product prices in the app. Donations are consumable, so a user can donate again.
+- The app-store share text must use the current application ID to construct the Play listing URL.
 
 **Do not block initial development on branding decisions.** Use a placeholder application ID only until the first Play upload; use a configurable namespace and document the required rename steps.
 
