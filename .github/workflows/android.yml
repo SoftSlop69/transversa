@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   assemble-debug:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci:android-build')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci:build:android')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
