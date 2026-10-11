@@ -9,7 +9,9 @@ Transversa is an offline-first Android media converter. This repository currentl
 1. Open this repository folder in Android Studio.
 2. Let Gradle sync with the checked-in Gradle wrapper.
 3. Select the app run configuration and a device or the Transversa_API_37 emulator.
-4. Run the app. The current screen can select a media file, but preview and conversion are not implemented yet.
+4. Run the app and select or share one video, image, or audio file to inspect its metadata and preview it. Unsupported platform previews are reported in the app.
+
+Android conversion, settings, and preset management are not implemented yet.
 
 The package ID com.example.transversa and minimum Android API 26 are provisional development choices. Choose the permanent app ID and supported minimum Android version before the first Play upload.
 

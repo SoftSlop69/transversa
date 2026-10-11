@@ -3,9 +3,16 @@ package com.example.transversa
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -14,46 +21,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun TransversaApp(
-    selectedName: String?,
+    mediaState: MediaScreenState,
     onSelectMedia: () -> Unit,
 ) {
-    val navController = rememberNavController()
-
     TransversaTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { contentPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = "home",
+            HomeScreen(
+                mediaState = mediaState,
+                onSelectMedia = onSelectMedia,
                 modifier = Modifier.padding(contentPadding),
-            ) {
-                composable("home") {
-                    HomeScreen(
-                        selectedName = selectedName,
-                        onSelectMedia = onSelectMedia,
-                    )
-                }
-            }
+            )
         }
     }
 }
 
 @Composable
 private fun HomeScreen(
-    selectedName: String?,
+    mediaState: MediaScreenState,
     onSelectMedia: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 28.dp, vertical = 24.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text(
             text = stringResource(R.string.app_name),
@@ -63,23 +60,49 @@ private fun HomeScreen(
             text = stringResource(R.string.tagline),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
         )
-        Text(
-            text = selectedName?.let { stringResource(R.string.selected_media, it) }
-                ?: stringResource(R.string.home_prompt),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 32.dp, bottom = 20.dp),
-        )
-        Button(onClick = onSelectMedia) {
-            Text(stringResource(R.string.select_media))
+
+        when (mediaState) {
+            MediaScreenState.Empty -> {
+                Text(
+                    text = stringResource(R.string.home_prompt),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Button(onClick = onSelectMedia) { Text(stringResource(R.string.select_media)) }
+            }
+
+            is MediaScreenState.Inspecting -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.padding(end = 14.dp))
+                    Text(stringResource(R.string.inspecting_media))
+                }
+                Text(mediaState.uri.lastPathSegment.orEmpty(), style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = onSelectMedia) { Text(stringResource(R.string.choose_another_media)) }
+            }
+
+            is MediaScreenState.Ready -> {
+                MediaPreview(mediaState.media)
+                MediaMetadata(mediaState.media)
+                Button(onClick = onSelectMedia) { Text(stringResource(R.string.choose_another_media)) }
+            }
+
+            is MediaScreenState.Failed -> {
+                Text(
+                    text = stringResource(
+                        if (mediaState.permissionRevoked) R.string.media_permission_unavailable
+                        else R.string.media_inspection_failed,
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Button(onClick = onSelectMedia) { Text(stringResource(R.string.select_media)) }
+            }
         }
-        Text(
-            text = stringResource(R.string.incomplete_notice),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 28.dp),
-        )
+
+        Spacer(Modifier.height(8.dp))
     }
 }
-

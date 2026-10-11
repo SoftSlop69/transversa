@@ -20,6 +20,8 @@ This initial inventory covers the Android Milestone A project tooling and UI dep
 | Material 3 for Compose | BOM-managed | Apache License 2.0 | Android UI components. |
 | Activity Compose | 1.13.0 | Apache License 2.0 | Android activity and Compose integration. |
 | Navigation Compose | 2.10.2 | Apache License 2.0 | Android Compose navigation. |
+| AndroidX Media3 ExoPlayer and UI | 1.11.1 | Apache License 2.0 | Local video/audio preview playback and controls. |
+| Coil Compose | 3.6.3 | Apache License 2.0 | Local image preview with constraint-aware decoding. |
 
 Upstream project license files and transitive dependency notices remain authoritative. This file is an initial inventory, not a release compliance review. It does not cover a future FFmpeg, x264, x265, JNI, Media3, Room, or DataStore integration.
 

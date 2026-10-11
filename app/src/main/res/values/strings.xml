@@ -4,8 +4,24 @@
     <string name="app_name">Transversa</string>
     <string name="tagline">The ultimate converter</string>
     <string name="home_prompt">Choose a video, image, or audio file to get started.</string>
-    <string name="selected_media">Selected: %1$s</string>
     <string name="select_media">Select media</string>
-    <string name="incomplete_notice">Preview and conversion are not implemented yet.</string>
+    <string name="choose_another_media">Choose another file</string>
+    <string name="inspecting_media">Inspecting media…</string>
+    <string name="media_inspection_failed">Could not read this media. Check that it is still available, then choose it again.</string>
+    <string name="media_permission_unavailable">Access to this media is no longer available. Choose it again to continue.</string>
+    <string name="preview_unavailable">This file could not be previewed by the Android media decoder.</string>
+    <string name="unknown_media_type">Unrecognized media</string>
+    <string name="video">Video</string>
+    <string name="image">Image</string>
+    <string name="audio">Audio</string>
+    <string name="audio_preview">Audio preview</string>
+    <string name="image_preview">Selected image preview</string>
+    <string name="play_audio">Play</string>
+    <string name="pause_audio">Pause</string>
+    <string name="media_type">Type</string>
+    <string name="media_format">Format</string>
+    <string name="dimensions">Dimensions</string>
+    <string name="duration">Duration</string>
+    <string name="file_size">File size</string>
 </resources>
 

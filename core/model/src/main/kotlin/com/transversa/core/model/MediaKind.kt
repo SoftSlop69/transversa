@@ -2,6 +2,7 @@
 package com.transversa.core.model
 
 enum class MediaKind {
+    UNKNOWN,
     VIDEO,
     IMAGE,
     AUDIO,
