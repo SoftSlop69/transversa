@@ -1,0 +1,459 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package com.example.transversa
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+private data class LicenseNotice(val title: Int, val summary: Int, val asset: String)
+
+private val licenseNotices = listOf(
+    LicenseNotice(R.string.license_gpl3_title, R.string.license_project_summary, "GPL-3.0.txt"),
+    LicenseNotice(R.string.license_gpl2_title, R.string.license_ffmpeg_summary, "GPL-2.0.txt"),
+    LicenseNotice(R.string.license_lgpl2_title, R.string.license_lame_summary, "LGPL-2.0.txt"),
+    LicenseNotice(R.string.license_lgpl_title, R.string.license_ffmpeg_lgpl_summary, "LGPL-2.1.txt"),
+    LicenseNotice(R.string.license_bsd_title, R.string.license_kvazaar_summary, "BSD-3-Clause.txt"),
+    LicenseNotice(R.string.license_apache_title, R.string.license_android_summary, "Apache-2.0.txt"),
+    LicenseNotice(R.string.license_android_sdk_title, R.string.license_billing_summary, "ANDROID-SDK-LICENSE.txt"),
+    LicenseNotice(R.string.license_ofl_title, R.string.license_font_summary, "OFL-1.1.txt"),
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun InfoScreen(
+    donationState: DonationBillingState,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit,
+    notificationsEnabled: Boolean,
+    onNotificationsEnabledChange: (Boolean) -> Unit,
+    onShareApp: () -> Unit,
+    onDonate: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showDonations by remember { mutableStateOf(false) }
+    var selectedLicense by remember { mutableStateOf<LicenseNotice?>(null) }
+    var applicationExpanded by remember { mutableStateOf(false) }
+    var licensesExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val versionName = remember(context) {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+            .getOrNull().orEmpty()
+    }
+    val versionLine = if (versionName.isNotBlank()) stringResource(R.string.version_number, versionName) else null
+    val applicationSummary = listOfNotNull(
+        stringResource(R.string.tagline),
+        versionLine,
+        stringResource(R.string.app_offline_description),
+    ).joinToString("\n")
+
+    Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
+        val themeModes = AppThemeMode.entries
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        ) {
+            themeModes.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = themeMode == mode,
+                    onClick = { onThemeModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = themeModes.size),
+                    icon = {},
+                    label = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            when (mode) {
+                                AppThemeMode.LIGHT -> Icon(Icons.Outlined.WbSunny, contentDescription = null, modifier = Modifier.size(18.dp))
+                                AppThemeMode.DARK -> Icon(Icons.Outlined.NightsStay, contentDescription = null, modifier = Modifier.size(18.dp))
+                                AppThemeMode.SYSTEM -> Unit
+                            }
+                            Text(stringResource(when (mode) {
+                                AppThemeMode.LIGHT -> R.string.theme_light_mode
+                                AppThemeMode.SYSTEM -> R.string.theme_system
+                                AppThemeMode.DARK -> R.string.theme_dark_mode
+                            }))
+                        }
+                    },
+                )
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        ) {
+            SegmentedListItem(
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                leadingContent = {
+                    Icon(Icons.Outlined.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                },
+                supportingContent = { Text(stringResource(R.string.notifications_description)) },
+                trailingContent = {
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = onNotificationsEnabledChange,
+                    )
+                },
+                content = { Text(stringResource(R.string.notifications_title)) },
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.free_no_ads_no_tracking),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Button(
+            onClick = { showDonations = true },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            shapes = ButtonDefaults.shapes(),
+        ) {
+            Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(R.string.donate))
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clickable { uriHandler.openUri("https://openai.com/codex/") },
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.codex_color),
+                    contentDescription = stringResource(R.string.codex_logo_description),
+                    modifier = Modifier.size(48.dp),
+                )
+                Text(
+                    text = stringResource(R.string.built_with_codex),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clickable { uriHandler.openUri("https://ffmpeg.org/") },
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Outlined.Movie,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(R.string.built_on_ffmpeg),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        ExpandableInfoSection(
+            title = stringResource(R.string.application_info),
+            expanded = applicationExpanded,
+            onToggle = { applicationExpanded = !applicationExpanded },
+        ) {
+            SegmentedListItem(
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                supportingContent = { Text(applicationSummary) },
+                content = { Text(stringResource(R.string.app_name)) },
+            )
+        }
+
+        ExpandableInfoSection(
+            title = stringResource(R.string.software_licenses),
+            expanded = licensesExpanded,
+            onToggle = { licensesExpanded = !licensesExpanded },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                licenseNotices.forEachIndexed { index, license ->
+                    SegmentedListItem(
+                        onClick = { selectedLicense = license },
+                        shapes = ListItemDefaults.segmentedShapes(index = index, count = licenseNotices.size),
+                        supportingContent = { Text(stringResource(license.summary)) },
+                        content = { Text(stringResource(license.title)) },
+                    )
+                }
+            }
+        }
+
+    }
+
+    if (showDonations) {
+        ModalBottomSheet(
+            onDismissRequest = { showDonations = false },
+            sheetState = rememberBottomSheetState(
+                initialValue = SheetValue.Hidden,
+                enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+            ),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(stringResource(R.string.donate_to_transversa), style = MaterialTheme.typography.headlineSmall)
+                OutlinedButton(onClick = onShareApp, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text(stringResource(R.string.share_app))
+                }
+                Text(stringResource(R.string.support_options), style = MaterialTheme.typography.titleMedium)
+                DonationTier(
+                    title = R.string.donation_beer,
+                    icon = R.drawable.donation_beer,
+                    productId = "donation_small",
+                    offer = donationState.offers["donation_small"],
+                    state = donationState,
+                    onDonate = onDonate,
+                )
+                DonationTier(
+                    title = R.string.donation_donut,
+                    icon = R.drawable.donation_donut,
+                    productId = "donation_medium",
+                    offer = donationState.offers["donation_medium"],
+                    state = donationState,
+                    onDonate = onDonate,
+                )
+                DonationTier(
+                    title = R.string.donation_socks,
+                    icon = R.drawable.donation_socks,
+                    productId = "donation_socks",
+                    offer = donationState.offers["donation_socks"],
+                    state = donationState,
+                    onDonate = onDonate,
+                )
+                if (donationState.isRentSubscriptionActive) {
+                    TextButton(
+                        onClick = {
+                            uriHandler.openUri(
+                                "https://play.google.com/store/account/subscriptions?sku=rent_monthly&package=com.example.transversa",
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.manage_subscription))
+                    }
+                }
+                val purchaseMessage = when (donationState.purchaseStatus) {
+                    DonationPurchaseStatus.NONE -> null
+                    DonationPurchaseStatus.PENDING -> R.string.donation_pending
+                    DonationPurchaseStatus.SUCCESS -> R.string.donation_success
+                    DonationPurchaseStatus.FAILED -> R.string.donation_failed
+                }
+                purchaseMessage?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium) }
+                TextButton(onClick = { showDonations = false }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        }
+    }
+
+    selectedLicense?.let { license ->
+        val text by produceState(initialValue = "", license.asset) {
+            value = withContext(Dispatchers.IO) {
+                runCatching { context.assets.open("licenses/${license.asset}").bufferedReader().use { it.readText() } }
+                    .getOrElse { context.getString(R.string.license_load_failed) }
+            }
+        }
+        ModalBottomSheet(onDismissRequest = { selectedLicense = null }) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(stringResource(license.title), style = MaterialTheme.typography.headlineSmall)
+                Text(text, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { selectedLicense = null }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpandableInfoSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(role = Role.Button, onClick = onToggle)
+                        .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleSmall)
+                    IconButton(onClick = onToggle, shapes = IconButtonDefaults.shapes()) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                            contentDescription = stringResource(
+                                if (expanded) R.string.collapse_info_section else R.string.expand_info_section,
+                                title,
+                            ),
+                        )
+                    }
+                }
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                Column {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                            content()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DonationTier(
+    title: Int,
+    icon: Int,
+    productId: String,
+    offer: DonationOffer?,
+    state: DonationBillingState,
+    isRecurring: Boolean = false,
+    onDonate: (String) -> Unit,
+) {
+    val isSubscription = isRecurring || offer?.productDetails?.productType == com.android.billingclient.api.BillingClient.ProductType.SUBS
+    val displayedPrice = offer?.let {
+        it.billingPeriodLabel?.let { period -> stringResource(R.string.price_per_period, it.formattedPrice, period) }
+            ?: it.formattedPrice
+    } ?: stringResource(if (state.isLoading) R.string.loading_price else R.string.price_unavailable)
+    OutlinedButton(
+        onClick = { onDonate(productId) },
+        enabled = offer != null,
+        modifier = Modifier.fillMaxWidth(),
+        shapes = ButtonDefaults.shapes(),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)),
+                )
+                if (isSubscription) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.recurring_subscription))
+                }
+                Text(stringResource(title), modifier = Modifier.weight(1f))
+                Text(displayedPrice)
+            }
+            val detailText = offer?.productDetails?.description?.takeIf(String::isNotBlank)
+            if (detailText != null) {
+                Text(detailText, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall)
+            } else if (offer == null && !state.isLoading) {
+                Text(
+                    stringResource(R.string.product_unavailable_description),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (isSubscription) {
+                Text(
+                    stringResource(R.string.subscription_renewal_disclosure),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}

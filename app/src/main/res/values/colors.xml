@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="transversa_splash_background">#F6FBF6</color>
+    <color name="transversa_splash_icon_background">#006B3C</color>
+    <color name="transversa_launcher_background">#D5E9D7</color>
+</resources>
