@@ -154,6 +154,10 @@ class TransversaEndToEndTest {
     }
 
     private fun click(text: String) {
+        assertNotNull(
+            "Could not find '$text'",
+            device.wait(Until.findObject(By.text(text)), 10_000),
+        )
         val matches = device.findObjects(By.text(text))
         assertTrue("Could not find '$text'", matches.isNotEmpty())
         matches.last().click()
