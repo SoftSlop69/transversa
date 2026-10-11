@@ -109,11 +109,7 @@ fun InfoScreen(
             .getOrNull().orEmpty()
     }
     val versionLine = if (versionName.isNotBlank()) stringResource(R.string.version_number, versionName) else null
-    val applicationSummary = listOfNotNull(
-        stringResource(R.string.tagline),
-        versionLine,
-        stringResource(R.string.app_offline_description),
-    ).joinToString("\n")
+    val applicationSummary = versionLine.orEmpty()
 
     Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
         val themeModes = AppThemeMode.entries
@@ -234,11 +230,23 @@ fun InfoScreen(
             expanded = applicationExpanded,
             onToggle = { applicationExpanded = !applicationExpanded },
         ) {
-            SegmentedListItem(
-                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
-                supportingContent = { Text(applicationSummary) },
-                content = { Text(stringResource(R.string.app_name)) },
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SegmentedListItem(
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                    supportingContent = { Text(applicationSummary) },
+                    content = { Text(stringResource(R.string.app_name)) },
+                )
+                OutlinedButton(
+                    onClick = { uriHandler.openUri("https://github.com/SoftSlop69/transversa") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.see_the_source))
+                }
+            }
         }
 
         ExpandableInfoSection(
