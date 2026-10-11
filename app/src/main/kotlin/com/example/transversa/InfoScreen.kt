@@ -244,6 +244,11 @@ fun InfoScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes(),
                 ) {
+                    Icon(
+                        painter = painterResource(R.drawable.github_mark),
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
                     Text(stringResource(R.string.see_the_source))
                 }
             }
