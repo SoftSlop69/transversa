@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -97,11 +99,17 @@ fun MediaDetailsPanel(
     onSelectMedia: () -> Unit,
     modifier: Modifier = Modifier,
     previewHeight: Dp = 260.dp,
+    elevatedWhiteCard: Boolean = false,
 ) {
     var expanded by remember(media.uri) { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
     val title = "${sourceFormat(media)} › ${activePreset?.profile?.container?.uppercase() ?: "?"}"
-    Card(modifier = modifier.fillMaxWidth(), shape = shape) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        colors = if (elevatedWhiteCard) CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black) else CardDefaults.cardColors(),
+        elevation = if (elevatedWhiteCard) CardDefaults.cardElevation(defaultElevation = 8.dp) else CardDefaults.cardElevation(),
+    ) {
         Column {
             MediaPreview(media, Modifier.fillMaxWidth(), previewHeight)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
