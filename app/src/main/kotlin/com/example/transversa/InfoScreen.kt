@@ -21,6 +21,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -116,13 +119,23 @@ fun InfoScreen(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val useHorizontalCarousel = horizontalMode && maxWidth >= 600.dp && maxWidth > maxHeight
         if (useHorizontalCarousel) {
-            HorizontalUncontainedCarousel(
-                state = rememberCarouselState { 4 },
+            val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
+            val itemWidths = listOf(itemHeight * 0.68f, itemHeight * 1.25f, itemHeight * 0.86f, itemHeight * 1.05f)
+            val listState = rememberLazyListState()
+            val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
+            LazyRow(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
-                itemWidth = ((maxWidth - 40.dp) / 3).coerceAtLeast(240.dp),
-                itemSpacing = 4.dp,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            ) { index ->
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                itemsIndexed(itemWidths) { index, itemWidth ->
+                    Box(
+                        Modifier
+                            .width(itemWidth)
+                            .fillMaxHeight()
+                            .carouselParallaxScrollEffect(index, parallaxState, RoundedCornerShape(20.dp)),
+                    ) {
                 if (index == 0) {
                     LandscapeHeaderCard(
                         title = stringResource(R.string.info_title),
@@ -151,6 +164,8 @@ fun InfoScreen(
                             )
                             }
                         }
+                    }
+                }
                     }
                 }
             }
