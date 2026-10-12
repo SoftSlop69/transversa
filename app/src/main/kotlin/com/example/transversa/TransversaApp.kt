@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButtonDefaults
@@ -672,11 +673,11 @@ private fun HorizontalReadyConvertScreen(
                     )
                 }
 
-                1 -> Card(
+                1 -> ElevatedCard(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.elevatedCardElevation(),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -732,11 +733,11 @@ private fun HorizontalReadyConvertScreen(
                     }
                 }
 
-                2 -> Card(
+                2 -> ElevatedCard(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.elevatedCardElevation(),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(12.dp),
