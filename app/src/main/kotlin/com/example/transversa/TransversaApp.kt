@@ -672,12 +672,14 @@ internal fun LandscapeHeaderCard(
                     modifier = Modifier.weight(1f).padding(top = 12.dp),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             onClearMedia?.let { onClear ->
                 Button(
                     onClick = onClear,
-                    modifier = Modifier.padding(start = 48.dp),
+                    modifier = Modifier,
                 ) {
                     Text(stringResource(R.string.clear_history))
                 }
