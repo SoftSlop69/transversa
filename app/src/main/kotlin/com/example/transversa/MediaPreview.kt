@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ButtonDefaults
@@ -104,12 +105,7 @@ fun MediaDetailsPanel(
     var expanded by remember(media.uri) { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
     val title = "${sourceFormat(media)} › ${activePreset?.profile?.container?.uppercase() ?: "?"}"
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = shape,
-        colors = if (elevatedWhiteCard) CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black) else CardDefaults.cardColors(),
-        elevation = if (elevatedWhiteCard) CardDefaults.cardElevation(defaultElevation = 8.dp) else CardDefaults.cardElevation(),
-    ) {
+    val content: @Composable () -> Unit = {
         Column {
             MediaPreview(media, Modifier.fillMaxWidth(), previewHeight)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -157,6 +153,21 @@ fun MediaDetailsPanel(
                 }
             }
         }
+    }
+    if (elevatedWhiteCard) {
+        ElevatedCard(
+            modifier = modifier.fillMaxWidth(),
+            shape = shape,
+            colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+            elevation = CardDefaults.elevatedCardElevation(),
+            content = { content() },
+        )
+    } else {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = shape,
+            content = { content() },
+        )
     }
 }
 
