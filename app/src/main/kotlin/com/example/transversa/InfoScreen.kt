@@ -76,11 +76,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -124,14 +122,7 @@ fun InfoScreen(
         val useHorizontalCarousel = horizontalMode && maxWidth >= 600.dp && maxWidth > maxHeight
         if (useHorizontalCarousel) {
             val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
-            val infoTitle = stringResource(R.string.info_title)
-            val titleWidthPx = rememberTextMeasurer().measure(
-                text = infoTitle,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                softWrap = false,
-            ).size.width
-            val infoTitleCardWidth = with(LocalDensity.current) { titleWidthPx.toDp() } + 48.dp + 32.dp + 12.dp
+            val infoTitleCardWidth = landscapeTitleCardWidth(stringResource(R.string.info_title))
             val itemWidths = listOf(infoTitleCardWidth, itemHeight * 1.25f, itemHeight * 0.86f, itemHeight * 1.05f)
             val listState = rememberLazyListState()
             val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
