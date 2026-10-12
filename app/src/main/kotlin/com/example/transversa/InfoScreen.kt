@@ -157,6 +157,8 @@ fun InfoScreen(
                             1 -> InfoPrimaryColumn(
                                 themeMode, onThemeModeChange, notificationsEnabled,
                                 onNotificationsEnabledChange, onShowDonations = { showDonations = true },
+                                donationsAvailable = donationState.isLoading || donationState.offers.isNotEmpty(),
+                                onShareApp = onShareApp,
                                 compactLabels = true,
                             )
                             2 -> InfoBuiltWithColumn(compact = true)
@@ -177,6 +179,8 @@ fun InfoScreen(
                 InfoPrimaryColumn(
                     themeMode, onThemeModeChange, notificationsEnabled,
                     onNotificationsEnabledChange, onShowDonations = { showDonations = true },
+                                donationsAvailable = donationState.isLoading || donationState.offers.isNotEmpty(),
+                                onShareApp = onShareApp,
                     compactLabels = false,
                 )
                 InfoBuiltWithColumn()
@@ -274,6 +278,8 @@ private fun InfoPrimaryColumn(
     notificationsEnabled: Boolean,
     onNotificationsEnabledChange: (Boolean) -> Unit,
     onShowDonations: () -> Unit,
+    donationsAvailable: Boolean,
+    onShareApp: () -> Unit,
     compactLabels: Boolean,
 ) {
     val themeModes = AppThemeMode.entries
@@ -363,13 +369,18 @@ private fun InfoPrimaryColumn(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Button(
-        onClick = onShowDonations,
+        onClick = if (donationsAvailable) onShowDonations else onShareApp,
         modifier = Modifier.fillMaxWidth().height(if (compactLabels) 48.dp else 56.dp)
             .padding(horizontal = if (compactLabels) 8.dp else 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
         shapes = ButtonDefaults.shapes(),
     ) {
-        Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-        Text(stringResource(R.string.donate))
+        if (donationsAvailable) {
+            Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(R.string.donate))
+        } else {
+            Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(R.string.share_app))
+        }
     }
 }
 
