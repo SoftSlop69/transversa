@@ -60,6 +60,7 @@
     <string name="expand_preset_group">Expand %1$s presets</string>
     <string name="collapse_preset_group">Collapse %1$s presets</string>
     <string name="built_with_codex">Built with Codex</string>
+    <string name="slopsoft_logo_description">SlopSoft logo</string>
     <string name="codex_logo_description">Codex logo</string>
     <string name="built_on_ffmpeg">Built on top of FFmpeg</string>
     <string name="notifications_title">Notifications</string>
