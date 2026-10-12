@@ -896,7 +896,7 @@ private fun PresetSelector(
                 },
                 content = {
                     Text(
-                        preset.name,
+                        presetDisplayName(preset),
                         fontWeight = if (preset.isDefault) FontWeight.Bold else FontWeight.Normal,
                     )
                 },
@@ -1109,7 +1109,7 @@ private fun PresetsScreen(
                                     }
                                 }
                             },
-                            content = { Text(preset.name) },
+                            content = { Text(presetDisplayName(preset)) },
                         )
                                     }
                                     SegmentedListItem(
@@ -1178,6 +1178,15 @@ private fun mediaKindLabel(kind: MediaKind): String = when (kind) {
     MediaKind.IMAGE -> stringResource(R.string.images)
     MediaKind.AUDIO -> stringResource(R.string.audio)
     MediaKind.UNKNOWN -> stringResource(R.string.unknown_media_type)
+}
+
+@Composable
+private fun presetDisplayName(preset: ConversionPreset): String = when (preset.id) {
+    "video.simple", "audio.simple", "image.simple" -> stringResource(R.string.preset_simple)
+    "video.smaller-file", "audio.smaller-file" -> stringResource(R.string.preset_smaller_file)
+    "video.higher-quality", "audio.higher-quality" -> stringResource(R.string.preset_higher_quality)
+    "image.smaller-png" -> stringResource(R.string.preset_smaller_png)
+    else -> preset.name
 }
 
 private data class MainNavigationItem(val route: String, val label: Int, val icon: ImageVector)

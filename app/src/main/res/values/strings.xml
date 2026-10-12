@@ -73,6 +73,10 @@
     <string name="theme_system">System</string>
     <string name="theme_dark_mode">Dark</string>
     <string name="default_preset">DEFAULT</string>
+    <string name="preset_simple">Simple</string>
+    <string name="preset_smaller_file">Smaller file</string>
+    <string name="preset_higher_quality">Higher quality</string>
+    <string name="preset_smaller_png">Smaller PNG</string>
     <string name="converting_media">Converting media…</string>
     <string name="converting_media_progress">Converting media · %1$d%%</string>
     <string name="choose_save_destination">Choose where to save the converted file.</string>
