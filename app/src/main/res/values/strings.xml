@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <resources>
     <string name="app_name">Transversa</string>
-    <string name="tagline">The ultimate converter</string>
     <string name="home_prompt">Choose a video, image, or audio file to get started.</string>
     <string name="select_media">Select media</string>
     <string name="get_started">Get Started</string>
@@ -106,7 +105,7 @@
     <string name="info_title">Info</string>
     <string name="application_info">Application</string>
     <string name="version_number">Version %1$s</string>
-    <string name="app_offline_description">Convert media on your device.</string>
+    <string name="see_the_source">See the source</string>
     <string name="software_licenses">Software licenses</string>
     <string name="donate">Donate</string>
     <string name="donate_to_transversa">Support Transversa</string>
