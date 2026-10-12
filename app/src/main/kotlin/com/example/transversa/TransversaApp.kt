@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
@@ -45,6 +47,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -352,14 +356,34 @@ private fun ConvertScreen(
     allPresets: List<ConversionPreset>,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val useHorizontalLayout = maxWidth >= 600.dp && maxWidth > maxHeight
+        if (useHorizontalLayout && mediaState is MediaScreenState.Ready) {
+            HorizontalReadyConvertScreen(
+                media = mediaState.media,
+                outputState = outputState,
+                activePreset = activePreset,
+                recentPresets = recentPresets,
+                allPresets = allPresets,
+                isSharedInput = isSharedInput,
+                onSelectMedia = onSelectMedia,
+                onPresetSelected = onPresetSelected,
+                onGoToPresets = onGoToPresets,
+                onSaveMedia = onSaveMedia,
+                onShareMedia = onShareMedia,
+                onOpenSavedFile = onOpenSavedFile,
+                availableHeight = maxHeight,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
         when (mediaState) {
             MediaScreenState.Empty -> {
                 Text(
@@ -495,7 +519,135 @@ private fun ConvertScreen(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HorizontalReadyConvertScreen(
+    media: MediaDescriptor,
+    outputState: MediaOutputState,
+    activePreset: ConversionPreset?,
+    recentPresets: List<ConversionPreset>,
+    allPresets: List<ConversionPreset>,
+    isSharedInput: Boolean,
+    onSelectMedia: () -> Unit,
+    onPresetSelected: (ConversionPreset) -> Unit,
+    onGoToPresets: () -> Unit,
+    onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
+    onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
+    onOpenSavedFile: (android.net.Uri) -> Unit,
+    availableHeight: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier) {
+        val itemWidth = ((maxWidth - 72.dp) / 3).coerceAtLeast(216.dp)
+        val previewHeight = (availableHeight - 78.dp).coerceIn(140.dp, 260.dp)
+        HorizontalUncontainedCarousel(
+            state = rememberCarouselState { 3 },
+            modifier = Modifier.fillMaxSize(),
+            itemWidth = itemWidth,
+            itemSpacing = 12.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        ) { index ->
+            when (index) {
+                0 -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    MediaDetailsPanel(
+                        media = media,
+                        activePreset = activePreset,
+                        hideFilename = isSharedInput,
+                        onSelectMedia = onSelectMedia,
+                        previewHeight = previewHeight,
+                    )
+                }
+
+                1 -> Card(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(20.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        FilledTonalButton(
+                            onClick = { activePreset?.let { onSaveMedia(media, it) } },
+                            enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 88.dp),
+                            shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.size(32.dp))
+                                Text(stringResource(R.string.save_media), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = { activePreset?.let { onShareMedia(media, it) } },
+                            enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 88.dp),
+                            shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(32.dp))
+                                Text(stringResource(R.string.share_media), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        if (outputState.isBusy) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LoadingIndicator(modifier = Modifier.size(24.dp))
+                                Text(stringResource(R.string.converting_media_progress, outputState.progressPercent))
+                            }
+                        }
+                        if (outputState.savedFileName != null && outputState.savedFileUri != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(stringResource(R.string.saved_file_prefix), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    text = outputState.savedFileName,
+                                    modifier = Modifier.clickable(role = Role.Button) { onOpenSavedFile(outputState.savedFileUri) },
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.Underline),
+                                )
+                            }
+                        }
+                        outputState.message?.let { message ->
+                            Text(
+                                text = message,
+                                color = if (outputState.hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+
+                2 -> Card(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(20.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(stringResource(R.string.presets_title), style = MaterialTheme.typography.titleMedium)
+                        activePreset?.let { preset ->
+                            PresetSelector(
+                                activePreset = preset,
+                                recentPresets = recentPresets,
+                                allPresets = allPresets,
+                                onPresetSelected = onPresetSelected,
+                                onGoToPresets = onGoToPresets,
+                                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1164,3 +1316,4 @@ private fun PresetQualitySlider(
         )
     }
 }
+

@@ -58,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -79,9 +80,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun MediaPreview(media: MediaDescriptor, modifier: Modifier = Modifier) {
+fun MediaPreview(media: MediaDescriptor, modifier: Modifier = Modifier, videoHeight: Dp = 260.dp) {
     when (media.kind) {
-        MediaKind.VIDEO -> VideoPreview(media.uri, modifier)
+        MediaKind.VIDEO -> VideoPreview(media.uri, modifier, videoHeight)
         MediaKind.AUDIO -> AudioPreview(media.uri, modifier)
         MediaKind.IMAGE -> ImagePreview(media.uri, modifier)
         MediaKind.UNKNOWN -> PreviewUnavailable(modifier)
@@ -94,13 +95,15 @@ fun MediaDetailsPanel(
     activePreset: ConversionPreset?,
     hideFilename: Boolean,
     onSelectMedia: () -> Unit,
+    modifier: Modifier = Modifier,
+    previewHeight: Dp = 260.dp,
 ) {
     var expanded by remember(media.uri) { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
     val title = "${sourceFormat(media)} › ${activePreset?.profile?.container?.uppercase() ?: "?"}"
-    Card(modifier = Modifier.fillMaxWidth(), shape = shape) {
+    Card(modifier = modifier.fillMaxWidth(), shape = shape) {
         Column {
-            MediaPreview(media, Modifier.fillMaxWidth())
+            MediaPreview(media, Modifier.fillMaxWidth(), previewHeight)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -150,7 +153,7 @@ fun MediaDetailsPanel(
 }
 
 @Composable
-private fun VideoPreview(uri: Uri, modifier: Modifier) {
+private fun VideoPreview(uri: Uri, modifier: Modifier, height: Dp) {
     val context = LocalContext.current
     var previewFailed by remember(uri) { mutableStateOf(false) }
     var backdropFrame by remember(uri) { mutableStateOf<Bitmap?>(null) }
@@ -179,13 +182,13 @@ private fun VideoPreview(uri: Uri, modifier: Modifier) {
     }
 
     if (previewFailed) {
-        PreviewUnavailable(modifier.height(260.dp))
+        PreviewUnavailable(modifier.height(height))
     } else {
         Box(
             modifier = Modifier
                 .then(modifier)
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(height)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clipToBounds(),
         ) {
@@ -442,3 +445,4 @@ private fun MediaKind.labelResource(): Int = when (this) {
 }
 
 private fun formatTime(durationMs: Long): String = DateUtils.formatElapsedTime(durationMs.coerceAtLeast(0L) / 1_000L)
+
