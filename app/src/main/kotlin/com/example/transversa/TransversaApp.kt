@@ -720,21 +720,15 @@ private fun HorizontalReadyConvertScreen(
                     modifier = Modifier.fillMaxSize().padding(4.dp),
                 )
 
-                1 -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    MediaDetailsPanel(
-                        media = media,
-                        activePreset = activePreset,
-                        hideFilename = isSharedInput,
-                        onSelectMedia = onSelectMedia,
-                        modifier = Modifier.padding(4.dp),
-                        previewHeight = previewHeight,
-                        elevatedWhiteCard = true,
-                    )
-                }
+                1 -> MediaDetailsPanel(
+                    media = media,
+                    activePreset = activePreset,
+                    hideFilename = isSharedInput,
+                    onSelectMedia = onSelectMedia,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    previewHeight = previewHeight,
+                    elevatedWhiteCard = true,
+                )
 
                 2 -> ElevatedCard(
                     modifier = Modifier.fillMaxSize().padding(4.dp),
