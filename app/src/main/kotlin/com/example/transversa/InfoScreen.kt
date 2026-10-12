@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -121,11 +122,11 @@ fun InfoScreen(
                 itemSpacing = 12.dp,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) { index ->
-                Card(
+                ElevatedCard(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.elevatedCardElevation(),
                 ) {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         when (index) {
@@ -256,7 +257,11 @@ private fun InfoPrimaryColumn(
             SegmentedButton(
                 selected = themeMode == mode,
                 onClick = { onThemeModeChange(mode) },
-                modifier = Modifier.fillMaxHeight().heightIn(min = 56.dp),
+                modifier = if (compactLabels) {
+                    Modifier.fillMaxHeight().height(56.dp)
+                } else {
+                    Modifier.fillMaxHeight().heightIn(min = 56.dp)
+                },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = themeModes.size),
                 icon = {},
                 label = {
@@ -271,12 +276,15 @@ private fun InfoPrimaryColumn(
                         AppThemeMode.DARK -> R.string.theme_dark_mode
                     })
                     if (compactLabels) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             icon?.let { Icon(it, contentDescription = null, modifier = Modifier.size(14.dp)) }
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
-                                maxLines = 2,
+                                maxLines = 1,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             )
                         }
@@ -291,11 +299,11 @@ private fun InfoPrimaryColumn(
         }
     }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         if (compactLabels) {
-            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+            Column(Modifier.fillMaxWidth().padding(8.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.Top,
@@ -324,13 +332,14 @@ private fun InfoPrimaryColumn(
     }
     Text(
         text = stringResource(R.string.free_no_ads_no_tracking),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 2.dp),
+        style = if (compactLabels) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Button(
         onClick = onShowDonations,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().height(if (compactLabels) 48.dp else 56.dp)
+            .padding(horizontal = 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
         shapes = ButtonDefaults.shapes(),
     ) {
         Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
