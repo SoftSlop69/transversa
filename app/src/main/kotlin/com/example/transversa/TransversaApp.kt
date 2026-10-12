@@ -654,8 +654,8 @@ private fun HorizontalReadyConvertScreen(
             state = rememberCarouselState { 3 },
             modifier = Modifier.fillMaxSize(),
             itemWidth = itemWidth,
-            itemSpacing = 12.dp,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            itemSpacing = 4.dp,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         ) { index ->
             when (index) {
                 0 -> Column(
@@ -668,13 +668,14 @@ private fun HorizontalReadyConvertScreen(
                         activePreset = activePreset,
                         hideFilename = isSharedInput,
                         onSelectMedia = onSelectMedia,
+                        modifier = Modifier.padding(4.dp),
                         previewHeight = previewHeight,
                         elevatedWhiteCard = true,
                     )
                 }
 
                 1 -> ElevatedCard(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
                     elevation = CardDefaults.elevatedCardElevation(),
@@ -734,7 +735,7 @@ private fun HorizontalReadyConvertScreen(
                 }
 
                 2 -> ElevatedCard(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
                     elevation = CardDefaults.elevatedCardElevation(),
