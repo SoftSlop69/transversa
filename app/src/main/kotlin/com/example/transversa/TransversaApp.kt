@@ -693,9 +693,10 @@ internal fun LandscapeHeaderCard(
                 )
             }
             onClearMedia?.let { onClear ->
+                Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = onClear,
-                    modifier = Modifier,
+                    modifier = Modifier.align(Alignment.End),
                 ) {
                     Text(stringResource(R.string.clear_history))
                 }
@@ -738,7 +739,7 @@ private fun HorizontalReadyConvertScreen(
         val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
         val previewHeight = (itemHeight - 64.dp).coerceAtLeast(140.dp)
         val titleCardWidth = landscapeTitleCardWidth(stringResource(R.string.convert_title))
-        val itemWidths = listOf(titleCardWidth, itemHeight * 1.08f, itemHeight * 0.82f, itemHeight * 0.96f)
+        val itemWidths = listOf(titleCardWidth, itemHeight * 1.08f, itemHeight * 0.64f, itemHeight * 0.96f)
         val listState = rememberLazyListState()
         val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
         LazyRow(
@@ -779,14 +780,14 @@ private fun HorizontalReadyConvertScreen(
                     elevation = CardDefaults.elevatedCardElevation(),
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         FilledTonalButton(
                             onClick = { activePreset?.let { onSaveMedia(media, it) } },
                             enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
-                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 88.dp),
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 72.dp),
                             shapes = androidx.compose.material3.ButtonDefaults.shapes(),
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -797,7 +798,7 @@ private fun HorizontalReadyConvertScreen(
                         FilledTonalButton(
                             onClick = { activePreset?.let { onShareMedia(media, it) } },
                             enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
-                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 88.dp),
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 72.dp),
                             shapes = androidx.compose.material3.ButtonDefaults.shapes(),
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
