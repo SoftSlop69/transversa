@@ -21,6 +21,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -684,6 +687,7 @@ internal fun LandscapeHeaderCard(
     }
 }
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun HorizontalReadyConvertScreen(
     media: MediaDescriptor,
     outputState: MediaOutputState,
@@ -703,15 +707,24 @@ private fun HorizontalReadyConvertScreen(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier) {
-        val itemWidth = ((maxWidth - 72.dp) / 3).coerceAtLeast(216.dp)
-        val previewHeight = (availableHeight - 78.dp).coerceIn(140.dp, 260.dp)
-        HorizontalUncontainedCarousel(
-            state = rememberCarouselState { 4 },
+        val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
+        val previewHeight = (itemHeight - 64.dp).coerceAtLeast(140.dp)
+        val itemWidths = listOf(itemHeight * 0.68f, itemHeight * 1.08f, itemHeight * 0.82f, itemHeight * 0.96f)
+        val listState = rememberLazyListState()
+        val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
+        LazyRow(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            itemWidth = itemWidth,
-            itemSpacing = 4.dp,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        ) { index ->
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            itemsIndexed(itemWidths) { index, itemWidth ->
+                Box(
+                    Modifier
+                        .width(itemWidth)
+                        .fillMaxHeight()
+                        .carouselParallaxScrollEffect(index, parallaxState, RoundedCornerShape(20.dp)),
+                ) {
             when (index) {
                 0 -> LandscapeHeaderCard(
                     title = stringResource(R.string.convert_title),
@@ -814,10 +827,12 @@ private fun HorizontalReadyConvertScreen(
                     }
                 }
             }
+                }
+            }
         }
     }
 }
-
+
 @Composable
 private fun PresetSelector(
     activePreset: ConversionPreset,
