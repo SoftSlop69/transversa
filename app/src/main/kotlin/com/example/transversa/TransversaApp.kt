@@ -174,12 +174,15 @@ fun TransversaApp(
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val horizontalMode = maxWidth >= 600.dp && maxWidth > maxHeight
+            val carouselHeaderOwnsToolbar = horizontalMode && (
+                route == ROUTE_INFO || (route == ROUTE_CONVERT && mediaState is MediaScreenState.Ready)
+            )
             var navigationExpanded by remember { mutableStateOf(false) }
             Row(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.weight(1f).fillMaxSize(),
             topBar = {
-                TopAppBar(
+                if (!carouselHeaderOwnsToolbar) TopAppBar(
                     title = {
                         Text(
                             title,
@@ -253,6 +256,8 @@ fun TransversaApp(
                     ConvertScreen(
                         mediaState, outputState, activePreset, isSharedInput, recentPresets,
                         onSelectMedia, onPresetSelected,
+                        onNavigateBack = { if (!navController.popBackStack()) onExit() },
+                        onClearMedia = onClearMedia,
                         onGoToPresets = {
                             val kind = (mediaState as? MediaScreenState.Ready)?.media?.kind
                                 ?: activePreset?.mediaKind
@@ -278,6 +283,7 @@ fun TransversaApp(
                         onShareApp = onShareApp,
                         onDonate = onDonate,
                         horizontalMode = horizontalMode,
+                        onNavigateBack = { if (!navController.popBackStack()) onExit() },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -379,6 +385,8 @@ private fun ConvertScreen(
     recentPresets: List<ConversionPreset>,
     onSelectMedia: () -> Unit,
     onPresetSelected: (ConversionPreset) -> Unit,
+    onNavigateBack: () -> Unit,
+    onClearMedia: () -> Unit,
     onGoToPresets: () -> Unit,
     onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
     onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
@@ -396,6 +404,8 @@ private fun ConvertScreen(
                 recentPresets = recentPresets,
                 allPresets = allPresets,
                 isSharedInput = isSharedInput,
+                onNavigateBack = onNavigateBack,
+                onClearMedia = onClearMedia,
                 onSelectMedia = onSelectMedia,
                 onPresetSelected = onPresetSelected,
                 onGoToPresets = onGoToPresets,
@@ -631,6 +641,45 @@ private fun LandscapeNavigationSidebar(
 }
 
 @Composable
+internal fun LandscapeHeaderCard(
+    title: String,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onClearMedia: (() -> Unit)? = null,
+) {
+    ElevatedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+        elevation = CardDefaults.elevatedCardElevation(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
+            }
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f).padding(top = 12.dp),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleLarge,
+            )
+            onClearMedia?.let { onClear ->
+                IconButton(onClick = onClear, shapes = IconButtonDefaults.shapes()) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.clear_media),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HorizontalReadyConvertScreen(
     media: MediaDescriptor,
     outputState: MediaOutputState,
@@ -638,6 +687,8 @@ private fun HorizontalReadyConvertScreen(
     recentPresets: List<ConversionPreset>,
     allPresets: List<ConversionPreset>,
     isSharedInput: Boolean,
+    onNavigateBack: () -> Unit,
+    onClearMedia: () -> Unit,
     onSelectMedia: () -> Unit,
     onPresetSelected: (ConversionPreset) -> Unit,
     onGoToPresets: () -> Unit,
@@ -651,14 +702,21 @@ private fun HorizontalReadyConvertScreen(
         val itemWidth = ((maxWidth - 72.dp) / 3).coerceAtLeast(216.dp)
         val previewHeight = (availableHeight - 78.dp).coerceIn(140.dp, 260.dp)
         HorizontalUncontainedCarousel(
-            state = rememberCarouselState { 3 },
+            state = rememberCarouselState { 4 },
             modifier = Modifier.fillMaxSize(),
             itemWidth = itemWidth,
             itemSpacing = 4.dp,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         ) { index ->
             when (index) {
-                0 -> Column(
+                0 -> LandscapeHeaderCard(
+                    title = stringResource(R.string.convert_title),
+                    onNavigateBack = onNavigateBack,
+                    onClearMedia = if (!outputState.isBusy) onClearMedia else null,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                )
+
+                1 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
@@ -674,7 +732,7 @@ private fun HorizontalReadyConvertScreen(
                     )
                 }
 
-                1 -> ElevatedCard(
+                2 -> ElevatedCard(
                     modifier = Modifier.fillMaxSize().padding(4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
@@ -734,7 +792,7 @@ private fun HorizontalReadyConvertScreen(
                     }
                 }
 
-                2 -> ElevatedCard(
+                3 -> ElevatedCard(
                     modifier = Modifier.fillMaxSize().padding(4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
