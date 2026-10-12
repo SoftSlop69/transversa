@@ -105,6 +105,7 @@ fun InfoScreen(
     onShareApp: () -> Unit,
     onDonate: (String) -> Unit,
     horizontalMode: Boolean = false,
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var showDonations by remember { mutableStateOf(false) }
@@ -116,31 +117,39 @@ fun InfoScreen(
         val useHorizontalCarousel = horizontalMode && maxWidth >= 600.dp && maxWidth > maxHeight
         if (useHorizontalCarousel) {
             HorizontalUncontainedCarousel(
-                state = rememberCarouselState { 3 },
+                state = rememberCarouselState { 4 },
                 modifier = Modifier.fillMaxSize(),
-                itemWidth = ((maxWidth - 64.dp) / 3).coerceAtLeast(220.dp),
+                itemWidth = ((maxWidth - 40.dp) / 3).coerceAtLeast(240.dp),
                 itemSpacing = 4.dp,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             ) { index ->
-                ElevatedCard(
-                    modifier = Modifier.fillMaxSize().padding(4.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
-                    elevation = CardDefaults.elevatedCardElevation(),
-                ) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        when (index) {
-                            0 -> InfoPrimaryColumn(
+                if (index == 0) {
+                    LandscapeHeaderCard(
+                        title = stringResource(R.string.info_title),
+                        onNavigateBack = onNavigateBack,
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                    )
+                } else {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                        elevation = CardDefaults.elevatedCardElevation(),
+                    ) {
+                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            when (index) {
+                            1 -> InfoPrimaryColumn(
                                 themeMode, onThemeModeChange, notificationsEnabled,
                                 onNotificationsEnabledChange, onShowDonations = { showDonations = true },
                                 compactLabels = true,
                             )
-                            1 -> InfoBuiltWithColumn(compact = true)
-                            2 -> InfoDetailsColumn(
+                            2 -> InfoBuiltWithColumn(compact = true)
+                            3 -> InfoDetailsColumn(
                                 applicationExpanded, { applicationExpanded = it },
                                 licensesExpanded, { licensesExpanded = it },
                                 onLicenseSelected = { selectedLicense = it },
                             )
+                            }
                         }
                     }
                 }
@@ -251,7 +260,8 @@ private fun InfoPrimaryColumn(
 ) {
     val themeModes = AppThemeMode.entries
     SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max).padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)
+            .padding(horizontal = if (compactLabels) 8.dp else 16.dp, vertical = 4.dp),
     ) {
         themeModes.forEachIndexed { index, mode ->
             SegmentedButton(
@@ -296,7 +306,8 @@ private fun InfoPrimaryColumn(
         }
     }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = if (compactLabels) 8.dp else 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         if (compactLabels) {
@@ -329,14 +340,14 @@ private fun InfoPrimaryColumn(
     }
     Text(
         text = stringResource(R.string.free_no_ads_no_tracking),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = if (compactLabels) 16.dp else 24.dp, vertical = 2.dp),
         style = if (compactLabels) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Button(
         onClick = onShowDonations,
         modifier = Modifier.fillMaxWidth().height(if (compactLabels) 48.dp else 56.dp)
-            .padding(horizontal = 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
+            .padding(horizontal = if (compactLabels) 8.dp else 16.dp, vertical = if (compactLabels) 4.dp else 8.dp),
         shapes = ButtonDefaults.shapes(),
     ) {
         Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
