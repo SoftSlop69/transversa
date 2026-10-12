@@ -28,3 +28,10 @@ jobs:
           sudo apt-get install --yes build-essential curl git make nasm ninja-build pkg-config python3 unzip xz-utils yasm
       - name: Assemble Android debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: transversa-android-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
