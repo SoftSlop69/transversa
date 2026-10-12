@@ -378,6 +378,22 @@ private fun InfoBuiltWithColumn(compact: Boolean = false) {
     val uriHandler = LocalUriHandler.current
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { uriHandler.openUri("https://slopsoft.xyz") },
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.slopsoft_logo),
+                contentDescription = stringResource(R.string.slopsoft_logo_description),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
+        }
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable { uriHandler.openUri("https://openai.com/codex/") },
     ) {
         Row(
