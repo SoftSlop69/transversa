@@ -2,6 +2,7 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 package com.example.transversa
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -68,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.Font
@@ -75,6 +77,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -370,12 +373,23 @@ private fun SplashScreen() {
         )
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Box(contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.displaySmall.copy(fontFamily = robotoFlex, fontWeight = FontWeight.Black),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(16.dp))
+            Image(
+                painter = painterResource(R.drawable.slopsoft_logo),
+                contentDescription = stringResource(R.string.slopsoft_logo_description),
+                modifier = Modifier.width(240.dp).height(86.dp),
+                contentScale = ContentScale.Fit,
             )
         }
     }
