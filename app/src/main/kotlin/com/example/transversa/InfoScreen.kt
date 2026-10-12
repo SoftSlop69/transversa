@@ -119,11 +119,11 @@ fun InfoScreen(
                 state = rememberCarouselState { 3 },
                 modifier = Modifier.fillMaxSize(),
                 itemWidth = ((maxWidth - 64.dp) / 3).coerceAtLeast(220.dp),
-                itemSpacing = 12.dp,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                itemSpacing = 4.dp,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             ) { index ->
                 ElevatedCard(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
                     elevation = CardDefaults.elevatedCardElevation(),
@@ -135,7 +135,7 @@ fun InfoScreen(
                                 onNotificationsEnabledChange, onShowDonations = { showDonations = true },
                                 compactLabels = true,
                             )
-                            1 -> InfoBuiltWithColumn()
+                            1 -> InfoBuiltWithColumn(compact = true)
                             2 -> InfoDetailsColumn(
                                 applicationExpanded, { applicationExpanded = it },
                                 licensesExpanded, { licensesExpanded = it },
@@ -276,10 +276,7 @@ private fun InfoPrimaryColumn(
                         AppThemeMode.DARK -> R.string.theme_dark_mode
                     })
                     if (compactLabels) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             icon?.let { Icon(it, contentDescription = null, modifier = Modifier.size(14.dp)) }
                             Text(
                                 text = label,
@@ -348,7 +345,7 @@ private fun InfoPrimaryColumn(
 }
 
 @Composable
-private fun InfoBuiltWithColumn() {
+private fun InfoBuiltWithColumn(compact: Boolean = false) {
     val uriHandler = LocalUriHandler.current
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
@@ -364,7 +361,11 @@ private fun InfoBuiltWithColumn() {
                 contentDescription = stringResource(R.string.codex_logo_description),
                 modifier = Modifier.size(48.dp),
             )
-            Text(stringResource(R.string.built_with_codex), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(
+                stringResource(R.string.built_with_codex),
+                style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
     Card(
@@ -377,7 +378,11 @@ private fun InfoBuiltWithColumn() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Outlined.Movie, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.built_on_ffmpeg), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(
+                stringResource(R.string.built_on_ffmpeg),
+                style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
