@@ -55,8 +55,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
-import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.carousel.CarouselParallaxScrollEffectState
+import androidx.compose.material3.carousel.carouselParallaxScrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -675,10 +675,9 @@ internal fun LandscapeHeaderCard(
                 )
             }
             onClearMedia?.let { onClear ->
-                TextButton(
+                Button(
                     onClick = onClear,
                     modifier = Modifier.padding(start = 48.dp),
-                    shapes = androidx.compose.material3.ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.clear_history))
                 }
