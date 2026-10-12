@@ -43,7 +43,7 @@
     <string name="container_format">Format</string>
     <string name="video_codec">Video codec</string>
     <string name="audio_codec">Audio codec</string>
-    <string name="video_quality_crf">Video quality (lower is better)</string>
+    <string name="video_quality_crf">Video quality</string>
     <string name="audio_bitrate">Audio bitrate</string>
     <string name="image_format">Image format</string>
     <string name="png_compression">PNG compression</string>
@@ -60,6 +60,7 @@
     <string name="expand_preset_group">Expand %1$s presets</string>
     <string name="collapse_preset_group">Collapse %1$s presets</string>
     <string name="built_with_codex">Built with Codex</string>
+    <string name="slopsoft_logo_description">SlopSoft logo</string>
     <string name="codex_logo_description">Codex logo</string>
     <string name="built_on_ffmpeg">Built on top of FFmpeg</string>
     <string name="notifications_title">Notifications</string>
@@ -68,9 +69,9 @@
     <string name="appearance">Appearance</string>
     <string name="expand_info_section">Expand %1$s</string>
     <string name="collapse_info_section">Collapse %1$s</string>
-    <string name="theme_light_mode">Light Mode</string>
+    <string name="theme_light_mode">Light</string>
     <string name="theme_system">System</string>
-    <string name="theme_dark_mode">Dark Mode</string>
+    <string name="theme_dark_mode">Dark</string>
     <string name="default_preset">DEFAULT</string>
     <string name="converting_media">Converting media…</string>
     <string name="converting_media_progress">Converting media · %1$d%%</string>
@@ -98,6 +99,8 @@
     <string name="presets_title">Presets</string>
     <string name="preset_editor_title">Edit preset</string>
     <string name="navigate_back">Back</string>
+    <string name="expand_navigation">Expand navigation</string>
+    <string name="collapse_navigation">Collapse navigation</string>
     <string name="clear_history">Clear</string>
     <string name="empty_history">Your conversions will appear here.</string>
     <string name="delete_history_item">Delete from history</string>
@@ -141,4 +144,5 @@
     <string name="license_font_summary">Roboto Flex typeface</string>
     <string name="license_load_failed">Could not load the license text.</string>
 </resources>
+
 

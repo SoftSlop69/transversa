@@ -2,23 +2,34 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 package com.example.transversa
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButtonDefaults
@@ -45,6 +56,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.carousel.CarouselParallaxScrollEffectState
+import androidx.compose.material3.carousel.carouselParallaxScrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,11 +68,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -101,6 +119,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import kotlin.math.roundToInt
 import com.transversa.core.media.MediaDescriptor
 import com.transversa.core.model.MediaKind
@@ -160,10 +180,17 @@ fun TransversaApp(
             editorScreen -> stringResource(R.string.preset_editor_title)
             else -> stringResource(R.string.convert_title)
         }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val horizontalMode = maxWidth >= 600.dp && maxWidth > maxHeight
+            val carouselHeaderOwnsToolbar = horizontalMode && (
+                route == ROUTE_INFO || (route == ROUTE_CONVERT && mediaState is MediaScreenState.Ready)
+            )
+            var navigationExpanded by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f).fillMaxSize(),
             topBar = {
-                TopAppBar(
+                if (!carouselHeaderOwnsToolbar) TopAppBar(
                     title = {
                         Text(
                             title,
@@ -194,7 +221,7 @@ fun TransversaApp(
                 )
             },
             bottomBar = {
-                if (!editorScreen) {
+                if (!editorScreen && !horizontalMode) {
                     BoxWithConstraints {
                         val isCompactWidth = maxWidth < 600.dp
                         ShortNavigationBar(
@@ -237,6 +264,8 @@ fun TransversaApp(
                     ConvertScreen(
                         mediaState, outputState, activePreset, isSharedInput, recentPresets,
                         onSelectMedia, onPresetSelected,
+                        onNavigateBack = { if (!navController.popBackStack()) onExit() },
+                        onClearMedia = onClearMedia,
                         onGoToPresets = {
                             val kind = (mediaState as? MediaScreenState.Ready)?.media?.kind
                                 ?: activePreset?.mediaKind
@@ -261,6 +290,8 @@ fun TransversaApp(
                         onNotificationsEnabledChange = onNotificationsEnabledChange,
                         onShareApp = onShareApp,
                         onDonate = onDonate,
+                        horizontalMode = horizontalMode,
+                        onNavigateBack = { if (!navController.popBackStack()) onExit() },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -310,6 +341,23 @@ fun TransversaApp(
                 }
             }
         }
+                if (horizontalMode && !editorScreen) {
+                    LandscapeNavigationSidebar(
+                        route = route,
+                        expanded = navigationExpanded,
+                        onExpandedChange = { navigationExpanded = it },
+                        onNavigate = { destination ->
+                            if (
+                                route != destination &&
+                                !(destination == ROUTE_PRESETS && route.startsWith("$ROUTE_PRESETS/"))
+                            ) {
+                                navController.navigate(destination) { launchSingleTop = true }
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -325,12 +373,23 @@ private fun SplashScreen() {
         )
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Box(contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.displaySmall.copy(fontFamily = robotoFlex, fontWeight = FontWeight.Black),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(16.dp))
+            Image(
+                painter = painterResource(R.drawable.slopsoft_logo),
+                contentDescription = stringResource(R.string.slopsoft_logo_description),
+                modifier = Modifier.width(240.dp).height(86.dp),
+                contentScale = ContentScale.Fit,
             )
         }
     }
@@ -345,6 +404,8 @@ private fun ConvertScreen(
     recentPresets: List<ConversionPreset>,
     onSelectMedia: () -> Unit,
     onPresetSelected: (ConversionPreset) -> Unit,
+    onNavigateBack: () -> Unit,
+    onClearMedia: () -> Unit,
     onGoToPresets: () -> Unit,
     onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
     onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
@@ -352,14 +413,36 @@ private fun ConvertScreen(
     allPresets: List<ConversionPreset>,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val useHorizontalLayout = maxWidth >= 600.dp && maxWidth > maxHeight
+        if (useHorizontalLayout && mediaState is MediaScreenState.Ready) {
+            HorizontalReadyConvertScreen(
+                media = mediaState.media,
+                outputState = outputState,
+                activePreset = activePreset,
+                recentPresets = recentPresets,
+                allPresets = allPresets,
+                isSharedInput = isSharedInput,
+                onNavigateBack = onNavigateBack,
+                onClearMedia = onClearMedia,
+                onSelectMedia = onSelectMedia,
+                onPresetSelected = onPresetSelected,
+                onGoToPresets = onGoToPresets,
+                onSaveMedia = onSaveMedia,
+                onShareMedia = onShareMedia,
+                onOpenSavedFile = onOpenSavedFile,
+                availableHeight = maxHeight,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
         when (mediaState) {
             MediaScreenState.Empty -> {
                 Text(
@@ -495,10 +578,291 @@ private fun ConvertScreen(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 }
 
+@Composable
+private fun LandscapeNavigationSidebar(
+    route: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onNavigate: (String) -> Unit,
+) {
+    val sidebarWidth by animateDpAsState(
+        targetValue = if (expanded) 184.dp else 72.dp,
+        label = "landscapeNavigationWidth",
+    )
+    Surface(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(sidebarWidth)
+            .padding(start = 4.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
+            .animateContentSize(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = if (expanded) Alignment.Start else Alignment.CenterHorizontally,
+        ) {
+            IconButton(
+                onClick = { onExpandedChange(!expanded) },
+                modifier = if (expanded) Modifier.fillMaxWidth() else Modifier,
+                shapes = IconButtonDefaults.shapes(),
+            ) {
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = stringResource(
+                        if (expanded) R.string.collapse_navigation else R.string.expand_navigation,
+                    ),
+                )
+            }
+            mainNavigationItems().forEach { item ->
+                val selected = route == item.route ||
+                    (item.route == ROUTE_PRESETS && route.startsWith("$ROUTE_PRESETS/"))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainer,
+                        )
+                        .clickable { onNavigate(item.route) }
+                        .padding(horizontal = if (expanded) 14.dp else 0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
+                ) {
+                    Icon(
+                        item.icon,
+                        contentDescription = if (expanded) null else stringResource(item.label),
+                        tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (expanded) {
+                        Text(
+                            text = stringResource(item.label),
+                            modifier = Modifier.padding(start = 14.dp),
+                            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun LandscapeHeaderCard(
+    title: String,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onClearMedia: (() -> Unit)? = null,
+) {
+    ElevatedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+        elevation = CardDefaults.elevatedCardElevation(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
+                }
+                Text(
+                    text = title,
+                    modifier = Modifier.weight(1f).padding(top = 12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+            onClearMedia?.let { onClear ->
+                Spacer(modifier = Modifier.weight(1f))
+                Button(
+                    onClick = onClear,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(stringResource(R.string.clear_history))
+                }
+            }
+        }
+    }
+}
+@Composable
+internal fun landscapeTitleCardWidth(title: String): androidx.compose.ui.unit.Dp {
+    val titleWidthPx = rememberTextMeasurer().measure(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        maxLines = 1,
+        softWrap = false,
+    ).size.width
+    return with(LocalDensity.current) { titleWidthPx.toDp() } + 48.dp + 32.dp + 12.dp
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun HorizontalReadyConvertScreen(
+    media: MediaDescriptor,
+    outputState: MediaOutputState,
+    activePreset: ConversionPreset?,
+    recentPresets: List<ConversionPreset>,
+    allPresets: List<ConversionPreset>,
+    isSharedInput: Boolean,
+    onNavigateBack: () -> Unit,
+    onClearMedia: () -> Unit,
+    onSelectMedia: () -> Unit,
+    onPresetSelected: (ConversionPreset) -> Unit,
+    onGoToPresets: () -> Unit,
+    onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
+    onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
+    onOpenSavedFile: (android.net.Uri) -> Unit,
+    availableHeight: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier) {
+        val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
+        val previewHeight = (itemHeight - 64.dp).coerceAtLeast(140.dp)
+        val titleCardWidth = landscapeTitleCardWidth(stringResource(R.string.convert_title))
+        val itemWidths = listOf(titleCardWidth, itemHeight * 1.08f, itemHeight * 0.64f, itemHeight * 0.96f)
+        val listState = rememberLazyListState()
+        val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            itemsIndexed(itemWidths) { index, itemWidth ->
+                Box(
+                    Modifier
+                        .width(itemWidth)
+                        .fillMaxHeight()
+                        .carouselParallaxScrollEffect(index, parallaxState, RoundedCornerShape(20.dp)),
+                ) {
+            when (index) {
+                0 -> LandscapeHeaderCard(
+                    title = stringResource(R.string.convert_title),
+                    onNavigateBack = onNavigateBack,
+                    onClearMedia = if (!outputState.isBusy) onClearMedia else null,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                )
+
+                1 -> MediaDetailsPanel(
+                    media = media,
+                    activePreset = activePreset,
+                    hideFilename = isSharedInput,
+                    onSelectMedia = onSelectMedia,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    previewHeight = previewHeight,
+                    elevatedWhiteCard = true,
+                )
+
+                2 -> ElevatedCard(
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.elevatedCardElevation(),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        FilledTonalButton(
+                            onClick = { activePreset?.let { onSaveMedia(media, it) } },
+                            enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 72.dp),
+                            shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.size(32.dp))
+                                Text(stringResource(R.string.save_media), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = { activePreset?.let { onShareMedia(media, it) } },
+                            enabled = !outputState.isBusy && media.kind != MediaKind.UNKNOWN && activePreset != null,
+                            modifier = Modifier.fillMaxWidth().weight(1f).heightIn(min = 72.dp),
+                            shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(32.dp))
+                                Text(stringResource(R.string.share_media), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        if (outputState.isBusy) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LoadingIndicator(modifier = Modifier.size(24.dp))
+                                Text(stringResource(R.string.converting_media_progress, outputState.progressPercent))
+                            }
+                        }
+                        if (outputState.savedFileName != null && outputState.savedFileUri != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(stringResource(R.string.saved_file_prefix), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    text = outputState.savedFileName,
+                                    modifier = Modifier.clickable(role = Role.Button) { onOpenSavedFile(outputState.savedFileUri) },
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.Underline),
+                                )
+                            }
+                        }
+                        outputState.message?.let { message ->
+                            Text(
+                                text = message,
+                                color = if (outputState.hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+
+                3 -> ElevatedCard(
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.elevatedCardElevation(),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(stringResource(R.string.presets_title), style = MaterialTheme.typography.titleMedium)
+                        activePreset?.let { preset ->
+                            PresetSelector(
+                                activePreset = preset,
+                                recentPresets = recentPresets,
+                                allPresets = allPresets,
+                                onPresetSelected = onPresetSelected,
+                                onGoToPresets = onGoToPresets,
+                                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                            )
+                        }
+                    }
+                }
+            }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun PresetSelector(
     activePreset: ConversionPreset,
@@ -953,71 +1317,83 @@ private fun PresetEditorScreen(
                         audioCodec = if (it == "webm") "vorbis" else "aac"
                     },
                 )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.video_codec),
-                    selected = videoCodec,
-                    options = when (container) {
-                        "webm" -> listOf("vp9")
-                        "mkv" -> listOf("h264", "hevc", "vp9")
-                        else -> listOf("h264", "hevc")
-                    },
-                    optionLabel = { videoCodecLabel(it) },
-                    onSelected = { videoCodec = it },
-                )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.audio_codec),
-                    selected = audioCodec,
-                    options = when (container) {
-                        "webm" -> listOf("vorbis")
-                        "mkv" -> listOf("aac", "mp3", "flac", "vorbis")
-                        else -> listOf("aac", "mp3")
-                    },
-                    optionLabel = { it.uppercase() },
-                    onSelected = { audioCodec = it },
-                )
-                PresetQualitySlider(
-                    label = stringResource(R.string.video_quality_crf),
-                    valueText = videoQuality.toString(),
-                    value = videoQuality.toFloat(),
-                    valueRange = 0f..51f,
-                    steps = 50,
-                    onValueChange = { videoQuality = it.roundToInt() },
-                )
-                PresetQualitySlider(
-                    label = stringResource(R.string.audio_bitrate),
-                    valueText = "$audioBitrate kb/s",
-                    value = audioBitrate.toFloat(),
-                    valueRange = 32f..320f,
-                    onValueChange = { audioBitrate = it.roundToInt() },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.video_codec),
+                        selected = videoCodec,
+                        options = when (container) {
+                            "webm" -> listOf("vp9")
+                            "mkv" -> listOf("h264", "hevc", "vp9")
+                            else -> listOf("h264", "hevc")
+                        },
+                        optionLabel = { videoCodecLabel(it) },
+                        onSelected = { videoCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.audio_codec),
+                        selected = audioCodec,
+                        options = when (container) {
+                            "webm" -> listOf("vorbis")
+                            "mkv" -> listOf("aac", "mp3", "flac", "vorbis")
+                            else -> listOf("aac", "mp3")
+                        },
+                        optionLabel = { it.uppercase() },
+                        onSelected = { audioCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetQualitySlider(
+                        label = stringResource(R.string.video_quality_crf),
+                        valueText = videoQuality.toString(),
+                        value = videoQuality.toFloat(),
+                        valueRange = 0f..51f,
+                        steps = 50,
+                        onValueChange = { videoQuality = it.roundToInt() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetQualitySlider(
+                        label = stringResource(R.string.audio_bitrate),
+                        valueText = "$audioBitrate kb/s",
+                        value = audioBitrate.toFloat(),
+                        valueRange = 32f..320f,
+                        onValueChange = { audioBitrate = it.roundToInt() },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
 
             MediaKind.AUDIO -> {
-                PresetChoiceGroup(
-                    label = stringResource(R.string.container_format),
-                    selected = container,
-                    options = listOf("mp3", "flac", "ogg"),
-                    optionLabel = { it.uppercase() },
-                    onSelected = {
-                        container = it
-                        audioCodec = when (it) {
-                            "mp3" -> "mp3"
-                            "flac" -> "flac"
-                            else -> "vorbis"
-                        }
-                    },
-                )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.audio_codec),
-                    selected = audioCodec,
-                    options = when (container) {
-                        "mp3" -> listOf("mp3")
-                        "flac" -> listOf("flac")
-                        else -> listOf("vorbis")
-                    },
-                    optionLabel = { it.uppercase() },
-                    onSelected = { audioCodec = it },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.container_format),
+                        selected = container,
+                        options = listOf("mp3", "flac", "ogg"),
+                        optionLabel = { it.uppercase() },
+                        onSelected = {
+                            container = it
+                            audioCodec = when (it) {
+                                "mp3" -> "mp3"
+                                "flac" -> "flac"
+                                else -> "vorbis"
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.audio_codec),
+                        selected = audioCodec,
+                        options = when (container) {
+                            "mp3" -> listOf("mp3")
+                            "flac" -> listOf("flac")
+                            else -> listOf("vorbis")
+                        },
+                        optionLabel = { it.uppercase() },
+                        onSelected = { audioCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 PresetQualitySlider(
                     label = stringResource(R.string.audio_bitrate),
                     valueText = "$audioBitrate kb/s",
@@ -1113,8 +1489,9 @@ private fun <T> PresetChoiceGroup(
     options: List<T>,
     optionLabel: (T) -> String,
     onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
-    Column {
+    Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, option ->
@@ -1143,6 +1520,7 @@ private fun PresetQualitySlider(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
     onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     val sliderState = androidx.compose.material3.rememberSliderState(
         value = value,
@@ -1150,7 +1528,7 @@ private fun PresetQualitySlider(
         trackRange = valueRange,
     )
     LaunchedEffect(value) { sliderState.value = value }
-    Column {
+    Column(modifier) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             Text(valueText, style = MaterialTheme.typography.bodyMedium)
@@ -1164,3 +1542,4 @@ private fun PresetQualitySlider(
         )
     }
 }
+
