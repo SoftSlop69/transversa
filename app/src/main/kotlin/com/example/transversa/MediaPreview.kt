@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -106,7 +108,13 @@ fun MediaDetailsPanel(
     val shape = RoundedCornerShape(16.dp)
     val title = "${sourceFormat(media)} › ${activePreset?.profile?.container?.uppercase() ?: "?"}"
     val content: @Composable () -> Unit = {
-        Column {
+        Column(
+            modifier = if (elevatedWhiteCard) {
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            } else {
+                Modifier
+            },
+        ) {
             MediaPreview(media, Modifier.fillMaxWidth(), previewHeight)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Surface(
@@ -156,7 +164,7 @@ fun MediaDetailsPanel(
     }
     if (elevatedWhiteCard) {
         ElevatedCard(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxSize(),
             shape = shape,
             colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
             elevation = CardDefaults.elevatedCardElevation(),
