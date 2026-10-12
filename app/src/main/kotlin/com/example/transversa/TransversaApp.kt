@@ -653,32 +653,36 @@ internal fun LandscapeHeaderCard(
         colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
         elevation = CardDefaults.elevatedCardElevation(),
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.Top,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
+                }
+                Text(
+                    text = title,
+                    modifier = Modifier.weight(1f).padding(top = 12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.titleLarge,
+                )
             }
-            Text(
-                text = title,
-                modifier = Modifier.weight(1f).padding(top = 12.dp),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleLarge,
-            )
             onClearMedia?.let { onClear ->
-                IconButton(onClick = onClear, shapes = IconButtonDefaults.shapes()) {
-                    Icon(
-                        Icons.Outlined.Close,
-                        contentDescription = stringResource(R.string.clear_media),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                TextButton(
+                    onClick = onClear,
+                    modifier = Modifier.padding(start = 48.dp),
+                    shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.clear_history))
                 }
             }
         }
     }
 }
-
 @Composable
 private fun HorizontalReadyConvertScreen(
     media: MediaDescriptor,
