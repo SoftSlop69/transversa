@@ -10,17 +10,21 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButtonDefaults
@@ -59,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -105,6 +110,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import kotlin.math.roundToInt
 import com.transversa.core.media.MediaDescriptor
 import com.transversa.core.model.MediaKind
@@ -164,8 +171,12 @@ fun TransversaApp(
             editorScreen -> stringResource(R.string.preset_editor_title)
             else -> stringResource(R.string.convert_title)
         }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val horizontalMode = maxWidth >= 600.dp && maxWidth > maxHeight
+            var navigationExpanded by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f).fillMaxSize(),
             topBar = {
                 TopAppBar(
                     title = {
@@ -198,7 +209,7 @@ fun TransversaApp(
                 )
             },
             bottomBar = {
-                if (!editorScreen) {
+                if (!editorScreen && !horizontalMode) {
                     BoxWithConstraints {
                         val isCompactWidth = maxWidth < 600.dp
                         ShortNavigationBar(
@@ -265,6 +276,7 @@ fun TransversaApp(
                         onNotificationsEnabledChange = onNotificationsEnabledChange,
                         onShareApp = onShareApp,
                         onDonate = onDonate,
+                        horizontalMode = horizontalMode,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -311,6 +323,23 @@ fun TransversaApp(
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
+                }
+            }
+        }
+                if (horizontalMode && !editorScreen) {
+                    LandscapeNavigationSidebar(
+                        route = route,
+                        expanded = navigationExpanded,
+                        onExpandedChange = { navigationExpanded = it },
+                        onNavigate = { destination ->
+                            if (
+                                route != destination &&
+                                !(destination == ROUTE_PRESETS && route.startsWith("$ROUTE_PRESETS/"))
+                            ) {
+                                navController.navigate(destination) { launchSingleTop = true }
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -526,6 +555,81 @@ private fun ConvertScreen(
 }
 
 @Composable
+private fun LandscapeNavigationSidebar(
+    route: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onNavigate: (String) -> Unit,
+) {
+    val sidebarWidth by animateDpAsState(
+        targetValue = if (expanded) 184.dp else 72.dp,
+        label = "landscapeNavigationWidth",
+    )
+    Surface(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(sidebarWidth)
+            .padding(start = 4.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
+            .animateContentSize(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = if (expanded) Alignment.Start else Alignment.CenterHorizontally,
+        ) {
+            IconButton(
+                onClick = { onExpandedChange(!expanded) },
+                modifier = if (expanded) Modifier.fillMaxWidth() else Modifier,
+                shapes = IconButtonDefaults.shapes(),
+            ) {
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = stringResource(
+                        if (expanded) R.string.collapse_navigation else R.string.expand_navigation,
+                    ),
+                )
+            }
+            mainNavigationItems().forEach { item ->
+                val selected = route == item.route ||
+                    (item.route == ROUTE_PRESETS && route.startsWith("$ROUTE_PRESETS/"))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainer,
+                        )
+                        .clickable { onNavigate(item.route) }
+                        .padding(horizontal = if (expanded) 14.dp else 0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
+                ) {
+                    Icon(
+                        item.icon,
+                        contentDescription = if (expanded) null else stringResource(item.label),
+                        tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (expanded) {
+                        Text(
+                            text = stringResource(item.label),
+                            modifier = Modifier.padding(start = 14.dp),
+                            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HorizontalReadyConvertScreen(
     media: MediaDescriptor,
     outputState: MediaOutputState,
@@ -564,12 +668,15 @@ private fun HorizontalReadyConvertScreen(
                         hideFilename = isSharedInput,
                         onSelectMedia = onSelectMedia,
                         previewHeight = previewHeight,
+                        elevatedWhiteCard = true,
                     )
                 }
 
                 1 -> Card(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -628,6 +735,8 @@ private fun HorizontalReadyConvertScreen(
                 2 -> Card(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -1105,71 +1214,83 @@ private fun PresetEditorScreen(
                         audioCodec = if (it == "webm") "vorbis" else "aac"
                     },
                 )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.video_codec),
-                    selected = videoCodec,
-                    options = when (container) {
-                        "webm" -> listOf("vp9")
-                        "mkv" -> listOf("h264", "hevc", "vp9")
-                        else -> listOf("h264", "hevc")
-                    },
-                    optionLabel = { videoCodecLabel(it) },
-                    onSelected = { videoCodec = it },
-                )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.audio_codec),
-                    selected = audioCodec,
-                    options = when (container) {
-                        "webm" -> listOf("vorbis")
-                        "mkv" -> listOf("aac", "mp3", "flac", "vorbis")
-                        else -> listOf("aac", "mp3")
-                    },
-                    optionLabel = { it.uppercase() },
-                    onSelected = { audioCodec = it },
-                )
-                PresetQualitySlider(
-                    label = stringResource(R.string.video_quality_crf),
-                    valueText = videoQuality.toString(),
-                    value = videoQuality.toFloat(),
-                    valueRange = 0f..51f,
-                    steps = 50,
-                    onValueChange = { videoQuality = it.roundToInt() },
-                )
-                PresetQualitySlider(
-                    label = stringResource(R.string.audio_bitrate),
-                    valueText = "$audioBitrate kb/s",
-                    value = audioBitrate.toFloat(),
-                    valueRange = 32f..320f,
-                    onValueChange = { audioBitrate = it.roundToInt() },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.video_codec),
+                        selected = videoCodec,
+                        options = when (container) {
+                            "webm" -> listOf("vp9")
+                            "mkv" -> listOf("h264", "hevc", "vp9")
+                            else -> listOf("h264", "hevc")
+                        },
+                        optionLabel = { videoCodecLabel(it) },
+                        onSelected = { videoCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.audio_codec),
+                        selected = audioCodec,
+                        options = when (container) {
+                            "webm" -> listOf("vorbis")
+                            "mkv" -> listOf("aac", "mp3", "flac", "vorbis")
+                            else -> listOf("aac", "mp3")
+                        },
+                        optionLabel = { it.uppercase() },
+                        onSelected = { audioCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetQualitySlider(
+                        label = stringResource(R.string.video_quality_crf),
+                        valueText = videoQuality.toString(),
+                        value = videoQuality.toFloat(),
+                        valueRange = 0f..51f,
+                        steps = 50,
+                        onValueChange = { videoQuality = it.roundToInt() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetQualitySlider(
+                        label = stringResource(R.string.audio_bitrate),
+                        valueText = "$audioBitrate kb/s",
+                        value = audioBitrate.toFloat(),
+                        valueRange = 32f..320f,
+                        onValueChange = { audioBitrate = it.roundToInt() },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
 
             MediaKind.AUDIO -> {
-                PresetChoiceGroup(
-                    label = stringResource(R.string.container_format),
-                    selected = container,
-                    options = listOf("mp3", "flac", "ogg"),
-                    optionLabel = { it.uppercase() },
-                    onSelected = {
-                        container = it
-                        audioCodec = when (it) {
-                            "mp3" -> "mp3"
-                            "flac" -> "flac"
-                            else -> "vorbis"
-                        }
-                    },
-                )
-                PresetChoiceGroup(
-                    label = stringResource(R.string.audio_codec),
-                    selected = audioCodec,
-                    options = when (container) {
-                        "mp3" -> listOf("mp3")
-                        "flac" -> listOf("flac")
-                        else -> listOf("vorbis")
-                    },
-                    optionLabel = { it.uppercase() },
-                    onSelected = { audioCodec = it },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.container_format),
+                        selected = container,
+                        options = listOf("mp3", "flac", "ogg"),
+                        optionLabel = { it.uppercase() },
+                        onSelected = {
+                            container = it
+                            audioCodec = when (it) {
+                                "mp3" -> "mp3"
+                                "flac" -> "flac"
+                                else -> "vorbis"
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PresetChoiceGroup(
+                        label = stringResource(R.string.audio_codec),
+                        selected = audioCodec,
+                        options = when (container) {
+                            "mp3" -> listOf("mp3")
+                            "flac" -> listOf("flac")
+                            else -> listOf("vorbis")
+                        },
+                        optionLabel = { it.uppercase() },
+                        onSelected = { audioCodec = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 PresetQualitySlider(
                     label = stringResource(R.string.audio_bitrate),
                     valueText = "$audioBitrate kb/s",
@@ -1265,8 +1386,9 @@ private fun <T> PresetChoiceGroup(
     options: List<T>,
     optionLabel: (T) -> String,
     onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
-    Column {
+    Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, option ->
@@ -1295,6 +1417,7 @@ private fun PresetQualitySlider(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
     onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     val sliderState = androidx.compose.material3.rememberSliderState(
         value = value,
@@ -1302,7 +1425,7 @@ private fun PresetQualitySlider(
         trackRange = valueRange,
     )
     LaunchedEffect(value) { sliderState.value = value }
-    Column {
+    Column(modifier) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             Text(valueText, style = MaterialTheme.typography.bodyMedium)
