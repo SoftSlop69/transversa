@@ -68,6 +68,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -688,6 +690,17 @@ internal fun LandscapeHeaderCard(
     }
 }
 @Composable
+internal fun landscapeTitleCardWidth(title: String): androidx.compose.ui.unit.Dp {
+    val titleWidthPx = rememberTextMeasurer().measure(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        maxLines = 1,
+        softWrap = false,
+    ).size.width
+    return with(LocalDensity.current) { titleWidthPx.toDp() } + 48.dp + 32.dp + 12.dp
+}
+
+@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun HorizontalReadyConvertScreen(
     media: MediaDescriptor,
@@ -710,7 +723,8 @@ private fun HorizontalReadyConvertScreen(
     BoxWithConstraints(modifier) {
         val itemHeight = (maxHeight - 8.dp).coerceAtLeast(220.dp)
         val previewHeight = (itemHeight - 64.dp).coerceAtLeast(140.dp)
-        val itemWidths = listOf(itemHeight * 0.68f, itemHeight * 1.08f, itemHeight * 0.82f, itemHeight * 0.96f)
+        val titleCardWidth = landscapeTitleCardWidth(stringResource(R.string.convert_title))
+        val itemWidths = listOf(titleCardWidth, itemHeight * 1.08f, itemHeight * 0.82f, itemHeight * 0.96f)
         val listState = rememberLazyListState()
         val parallaxState = remember(listState) { CarouselParallaxScrollEffectState(listState) }
         LazyRow(
