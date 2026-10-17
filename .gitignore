@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.gradle-user/
 .kotlin/
 build/
 
@@ -14,6 +15,12 @@ local.properties
 *.jks
 *.keystore
 keystore.properties
+
+# Local Play release artifacts
+app/release/*.aab
+app/release/*.zip
+app/build/outputs/bundle/release/*.aab
+app/build/outputs/bundle/release/*native-debug-symbols.zip
 
 # OS/editor
 .DS_Store
