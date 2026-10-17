@@ -1,24 +1,40 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+val releaseSigningPropertiesFile = rootProject.file("keystore.properties")
+val releaseSigningProperties = Properties().apply {
+    if (releaseSigningPropertiesFile.isFile) {
+        releaseSigningPropertiesFile.inputStream().use(::load)
+    }
+}
+val releaseKeystoreFile = releaseSigningProperties.getProperty("storeFile")
+    ?.takeIf(String::isNotBlank)
+    ?.let(::file)
+    ?: rootProject.file("keystore.properties")
 
 android {
     namespace = "com.example.transversa"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.transversa"
+        applicationId = "com.slopsoft.transversa"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 6
+        versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The in-process FFmpeg bridge is currently built for arm64-v8a only.
         // Keep the app package on the same ABI so Android Studio/emulators do
         // not select x86_64 and install an app without its native converter.
-        ndk { abiFilters += "arm64-v8a" }
+        ndk {
+            abiFilters += "arm64-v8a"
+            debugSymbolLevel = "FULL"
+        }
     }
 
     buildFeatures {
@@ -30,11 +46,47 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        create("playUpload") {
+            storeFile = releaseKeystoreFile
+            storePassword = releaseSigningProperties.getProperty("storePassword").orEmpty()
+            keyAlias = releaseSigningProperties.getProperty("keyAlias").orEmpty()
+            keyPassword = releaseSigningProperties.getProperty("keyPassword").orEmpty()
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("playUpload")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
+}
+
+// Keep the native symbols bundle beside the release AAB so both Play Console
+// upload files are easy to find together.
+val copyReleaseNativeDebugSymbols by tasks.registering(Copy::class) {
+    from(layout.buildDirectory.file("outputs/native-debug-symbols/release/native-debug-symbols.zip"))
+    into(layout.buildDirectory.dir("outputs/bundle/release"))
+    rename { "app-release-native-debug-symbols.zip" }
+}
+
+tasks.matching { it.name == "bundleRelease" }.configureEach {
+    finalizedBy(copyReleaseNativeDebugSymbols)
 }
 
 dependencies {
@@ -61,4 +113,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.uiautomator)
 }
+
 

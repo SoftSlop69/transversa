@@ -12,6 +12,7 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.provider.OpenableColumns
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors
 class MediaConversionService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
+    private var activeJobId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -46,6 +48,7 @@ class MediaConversionService : Service() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
+        activeJobId = jobId
 
         createNotificationChannels()
         val notification = progressNotification(0, getString(R.string.conversion_starting))
@@ -167,6 +170,11 @@ class MediaConversionService : Service() {
                 } else {
                     FileProvider.getUriForFile(this, "$packageName.fileprovider", output)
                 }
+                val resultFileName = if (action == ConversionJob.ACTION_SAVE) {
+                    queryDisplayName(resultUri) ?: outputName
+                } else {
+                    outputName
+                }
 
                 PresetPreferences(this).recordSuccessfulConversion(preset)
                 val conversionHistory = ConversionHistory(this)
@@ -177,13 +185,15 @@ class MediaConversionService : Service() {
                 }
                 conversionHistory.add(
                     media.displayName,
-                    outputName,
+                    resultFileName,
                     media.kind,
                     if (action == ConversionJob.ACTION_SAVE) OutputAction.SAVE else OutputAction.SHARE,
                     thumbnail,
+                    resultUri,
+                    spec.mimeType,
                 )
-                reportProgress(100, media.displayName)
-                finishConversion(startId, jobId, action, outputName, spec.mimeType, resultUri, null)
+                reportProgress(100, resultFileName)
+                finishConversion(startId, jobId, action, resultFileName, spec.mimeType, resultUri, null)
                 if (action == ConversionJob.ACTION_SAVE) output.delete()
             } finally {
                 input.delete()
@@ -200,11 +210,11 @@ class MediaConversionService : Service() {
     }
 
     private fun reportProgress(progress: Int, fileName: String) {
+        activeJobId?.let { ConversionJobStatus(this).updateProgress(it, progress) }
         notificationManager.notify(
             PROGRESS_NOTIFICATION_ID,
             progressNotification(progress, getString(R.string.conversion_progress_file, fileName)),
         )
-        sendBroadcast(Intent(ACTION_PROGRESS).setPackage(packageName).putExtra(EXTRA_PROGRESS, progress))
     }
 
     private fun finishConversion(
@@ -322,12 +332,24 @@ class MediaConversionService : Service() {
         return "$baseName.$extension"
     }
 
+    private fun queryDisplayName(uri: Uri): String? = runCatching {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    .takeIf { it >= 0 }
+                    ?.let(cursor::getString)
+                    ?.takeIf(String::isNotBlank)
+            } else {
+                null
+            }
+        }
+    }.getOrNull()
+
     private data class OutputSpec(val mimeType: String, val extension: String)
 
     companion object {
         private const val NOTIFICATION_PREFERENCES = "transversa_preferences"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
-        const val ACTION_PROGRESS = "com.example.transversa.action.CONVERSION_PROGRESS"
         const val ACTION_COMPLETED = "com.example.transversa.action.CONVERSION_COMPLETED"
         const val ACTION_FAILED = "com.example.transversa.action.CONVERSION_FAILED"
         const val EXTRA_PRESET = "preset_json"
@@ -337,7 +359,6 @@ class MediaConversionService : Service() {
         const val EXTRA_FILE_NAME = "file_name"
         const val EXTRA_MIME_TYPE = "mime_type"
         const val EXTRA_RESULT_URI = "result_uri"
-        const val EXTRA_PROGRESS = "progress"
         const val EXTRA_ERROR = "error"
         const val PROGRESS_CHANNEL_ID = "media_conversion_progress"
         const val RESULT_CHANNEL_ID = "media_conversion_results"
@@ -384,3 +405,4 @@ class ConversionResultActivity : android.app.Activity() {
         const val ACTION_OPEN_SAVED = "com.example.transversa.action.OPEN_SAVED"
     }
 }
+

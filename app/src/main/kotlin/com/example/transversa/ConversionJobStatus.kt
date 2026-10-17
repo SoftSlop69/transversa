@@ -27,8 +27,24 @@ internal class ConversionJobStatus(context: Context) {
             .remove(KEY_MIME_TYPE)
             .remove(KEY_RESULT_URI)
             .remove(KEY_ERROR)
+            .putInt(KEY_PROGRESS, 0)
             .putBoolean(KEY_HANDLED, false)
             .commit()
+    }
+
+    fun updateProgress(jobId: String, progress: Int) {
+        if (preferences.getString(KEY_ACTIVE_ID, null) == jobId &&
+            preferences.getString(KEY_STATE, null) == STATE_RUNNING
+        ) {
+            preferences.edit().putInt(KEY_PROGRESS, progress.coerceIn(0, 100)).apply()
+        }
+    }
+
+    fun progress(jobId: String): Int? {
+        if (preferences.getString(KEY_ACTIVE_ID, null) != jobId ||
+            preferences.getString(KEY_STATE, null) != STATE_RUNNING
+        ) return null
+        return preferences.getInt(KEY_PROGRESS, 0)
     }
 
     fun finish(result: ConversionJobResult) {
@@ -77,9 +93,11 @@ internal class ConversionJobStatus(context: Context) {
         const val KEY_MIME_TYPE = "mime_type"
         const val KEY_RESULT_URI = "result_uri"
         const val KEY_ERROR = "error"
+        const val KEY_PROGRESS = "progress"
         const val KEY_HANDLED = "handled"
         const val STATE_RUNNING = "running"
         const val STATE_SUCCEEDED = "succeeded"
         const val STATE_FAILED = "failed"
     }
 }
+

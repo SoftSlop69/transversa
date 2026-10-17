@@ -2,6 +2,7 @@
 package com.example.transversa
 
 import android.content.Context
+import android.net.Uri
 import com.transversa.core.model.MediaKind
 import com.transversa.core.model.OutputAction
 import java.io.File
@@ -17,6 +18,8 @@ data class ConversionHistoryEntry(
     val action: OutputAction,
     val createdAtMillis: Long,
     val thumbnailPath: String? = null,
+    val outputUri: Uri? = null,
+    val mimeType: String? = null,
 )
 
 /** Small, private on-device history of completed conversions. */
@@ -42,12 +45,22 @@ class ConversionHistory(context: Context) {
                     action = OutputAction.valueOf(item.getString("action")),
                     createdAtMillis = item.getLong("createdAtMillis"),
                     thumbnailPath = item.optString("thumbnailPath").takeIf(String::isNotBlank),
+                    outputUri = item.optString("outputUri").takeIf(String::isNotBlank)?.let(Uri::parse),
+                    mimeType = item.optString("mimeType").takeIf(String::isNotBlank),
                 )
             }.getOrNull()
         }
     }.getOrDefault(emptyList())
 
-    fun add(sourceName: String, outputName: String, kind: MediaKind, action: OutputAction, thumbnail: File? = null) {
+    fun add(
+        sourceName: String,
+        outputName: String,
+        kind: MediaKind,
+        action: OutputAction,
+        thumbnail: File? = null,
+        outputUri: Uri? = null,
+        mimeType: String? = null,
+    ) {
         if (!isEnabled()) {
             thumbnail?.delete()
             return
@@ -60,6 +73,8 @@ class ConversionHistory(context: Context) {
             action = action,
             createdAtMillis = System.currentTimeMillis(),
             thumbnailPath = thumbnail?.absolutePath,
+            outputUri = outputUri,
+            mimeType = mimeType,
         )
         write(listOf(item) + read())
     }
@@ -87,7 +102,9 @@ class ConversionHistory(context: Context) {
                 .put("kind", entry.kind.name)
                 .put("action", entry.action.name)
                 .put("createdAtMillis", entry.createdAtMillis)
-                .put("thumbnailPath", entry.thumbnailPath))
+                .put("thumbnailPath", entry.thumbnailPath)
+                .put("outputUri", entry.outputUri?.toString())
+                .put("mimeType", entry.mimeType))
         }
         preferences.edit().putString(KEY_ENTRIES, array.toString()).apply()
     }
@@ -98,3 +115,4 @@ class ConversionHistory(context: Context) {
         const val MAX_ENTRIES = 200
     }
 }
+

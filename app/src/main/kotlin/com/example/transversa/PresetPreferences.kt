@@ -126,8 +126,8 @@ class PresetPreferences(context: Context) {
     fun lastSaveLocation(): Uri? = preferences.getString(KEY_LAST_SAVE_LOCATION, null)
         ?.let(Uri::parse)
 
-    fun rememberSaveLocation(uri: Uri) {
-        preferences.edit().putString(KEY_LAST_SAVE_LOCATION, uri.toString()).apply()
+    fun rememberSaveLocation(uri: Uri?) {
+        preferences.edit().putString(KEY_LAST_SAVE_LOCATION, uri?.toString()).apply()
     }
 
     private fun selectedKey(mediaKind: MediaKind) = "${KEY_SELECTED_PRESET_PREFIX}${mediaKind.name}"
@@ -230,3 +230,4 @@ class PresetPreferences(context: Context) {
         const val RECENT_DELIMITER = "|"
     }
 }
+

@@ -2,8 +2,6 @@
 package com.example.transversa
 
 import android.content.Intent
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -17,7 +15,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.DisposableEffect
 import androidx.core.content.FileProvider
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -106,34 +103,13 @@ class MainActivity : ComponentActivity() {
                 if (!granted) Toast.makeText(this@MainActivity, R.string.notifications_disabled, Toast.LENGTH_LONG).show()
             }
 
-            DisposableEffect(Unit) {
-                val receiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: android.content.Context, intent: Intent) {
-                        when (intent.action) {
-                            MediaConversionService.ACTION_PROGRESS -> {
-                                outputState = outputState.copy(
-                                    isBusy = true,
-                                    progressPercent = intent.getIntExtra(MediaConversionService.EXTRA_PROGRESS, 0),
-                                )
-                            }
-                        }
-                    }
-                }
-                val filter = IntentFilter().apply {
-                    addAction(MediaConversionService.ACTION_PROGRESS)
-                }
-                ContextCompat.registerReceiver(
-                    this@MainActivity,
-                    receiver,
-                    filter,
-                    ContextCompat.RECEIVER_NOT_EXPORTED,
-                )
-                onDispose { unregisterReceiver(receiver) }
-            }
-
             LaunchedEffect(activeConversionJobId) {
                 val jobId = activeConversionJobId ?: return@LaunchedEffect
                 while (true) {
+                    val progress = withContext(Dispatchers.IO) { conversionJobStatus.progress(jobId) }
+                    if (progress != null) {
+                        outputState = outputState.copy(isBusy = true, progressPercent = progress)
+                    }
                     val result = withContext(Dispatchers.IO) { conversionJobStatus.read(jobId) }
                     if (result != null) {
                         conversionJobStatus.markHandled(jobId)
@@ -188,8 +164,9 @@ class MainActivity : ComponentActivity() {
             }
 
             val mediaPicker = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.OpenDocument(),
-                onResult = { uri ->
+                contract = ActivityResultContracts.StartActivityForResult(),
+                onResult = { result ->
+                    val uri = result.data?.data.takeIf { result.resultCode == RESULT_OK }
                     uri?.let {
                         tryPersistReadPermission(it)
                         isSharedInputState.value = false
@@ -258,7 +235,19 @@ class MainActivity : ComponentActivity() {
                         refreshNotificationsEnabled()
                     }
                 },
-                onSelectMedia = { mediaPicker.launch(arrayOf("video/*", "image/*", "audio/*")) },
+                onSelectMedia = {
+                    val openDocument = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("video/*", "image/*", "audio/*"))
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, defaultDownloadsUri())
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    }
+                    runCatching { mediaPicker.launch(preferSystemDocumentsUi(openDocument)) }
+                        .onFailure {
+                            Toast.makeText(this@MainActivity, R.string.files_app_unavailable, Toast.LENGTH_SHORT).show()
+                        }
+                },
                 onClearMedia = {
                     selectedUriTextState.value = null
                     isSharedInputState.value = false
@@ -299,11 +288,17 @@ class MainActivity : ComponentActivity() {
                         addCategory(Intent.CATEGORY_OPENABLE)
                         type = spec.mimeType
                         putExtra(Intent.EXTRA_TITLE, outputFileName(media.displayName, spec.extension))
-                        presetPreferences.lastSaveLocation()?.let { initialUri ->
-                            putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
-                        }
+                        val initialDirectory = presetPreferences.lastSaveLocation()
+                            ?.takeIf(::isLocalFilesDocument)
+                            ?.let(::savedFileParentUri)
+                            ?: defaultDownloadsUri()
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialDirectory)
                     }
-                    saveDocumentPicker.launch(createDocument)
+                    runCatching { saveDocumentPicker.launch(preferSystemDocumentsUi(createDocument)) }
+                        .onFailure {
+                            outputState = MediaOutputState()
+                            Toast.makeText(this@MainActivity, R.string.files_app_unavailable, Toast.LENGTH_SHORT).show()
+                        }
                 },
                 onOpenSavedFile = { savedUri ->
                     openSavedFileLocation(savedUri)
@@ -323,6 +318,7 @@ class MainActivity : ComponentActivity() {
                     conversionHistory.delete(id)
                     history = conversionHistory.read()
                 },
+                onOpenHistoryEntry = ::openHistoryEntry,
                 onClearHistory = {
                     conversionHistory.clear()
                     history = emptyList()
@@ -410,15 +406,68 @@ class MainActivity : ComponentActivity() {
 
         // Documents providers use provider-specific parent IDs. The SAF initial-URI extra
         // accepts the prior document URI and reopens its containing directory where possible.
-        presetPreferences.rememberSaveLocation(destination)
+        presetPreferences.rememberSaveLocation(destination.takeIf(::isLocalFilesDocument))
     }
 
     private fun openSavedFileLocation(savedUri: Uri) {
-        val filesIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(savedUri, DocumentsContract.Document.MIME_TYPE_DIR)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching {
+            val directoryUri = savedFileParentUri(savedUri) ?: defaultDownloadsUri()
+            val filesIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(directoryUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(preferSystemDocumentsUi(filesIntent))
+        }.onFailure {
+            Toast.makeText(this, R.string.files_app_unavailable, Toast.LENGTH_SHORT).show()
         }
-        startActivity(filesIntent)
+    }
+
+    private fun preferSystemDocumentsUi(intent: Intent): Intent {
+        val documentsUiPackages = setOf("com.google.android.documentsui", "com.android.documentsui")
+        val packageName = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            .firstOrNull { it.activityInfo.packageName in documentsUiPackages }
+            ?.activityInfo
+            ?.packageName
+            ?: error("Android Files is not available on this device.")
+        intent.setPackage(packageName)
+        return intent
+    }
+
+    private fun defaultDownloadsUri(): Uri = DocumentsContract.buildDocumentUri(
+        "com.android.externalstorage.documents",
+        "primary:Download",
+    )
+
+    private fun isLocalFilesDocument(uri: Uri): Boolean = uri.authority in setOf(
+        "com.android.externalstorage.documents",
+        "com.android.providers.downloads.documents",
+    )
+
+    private fun openHistoryEntry(entry: ConversionHistoryEntry) {
+        val outputUri = entry.outputUri
+        val exists = outputUri != null && runCatching {
+            contentResolver.openFileDescriptor(outputUri, "r")?.use { true } ?: false
+        }.getOrDefault(false)
+        if (!exists) {
+            Toast.makeText(this, R.string.history_file_missing, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (entry.action == OutputAction.SAVE) {
+            openSavedFileLocation(outputUri)
+        } else {
+            openShareChooser(outputUri, entry.mimeType ?: "application/octet-stream", entry.outputName)
+        }
+    }
+
+    private fun savedFileParentUri(savedUri: Uri): Uri? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        val authority = savedUri.authority ?: return null
+        return runCatching {
+            val documentIds = DocumentsContract.findDocumentPath(contentResolver, savedUri)?.path.orEmpty()
+            val parentDocumentId = documentIds.dropLast(1).lastOrNull() ?: return null
+            DocumentsContract.buildDocumentUri(authority, parentDocumentId)
+        }.getOrNull()
     }
 
     private fun openShareChooser(uri: Uri, mimeType: String, fileName: String) {
@@ -580,3 +629,4 @@ private fun outputFileName(displayName: String, extension: String): String {
         .ifBlank { "Transversa" }
     return "$baseName.$extension"
 }
+

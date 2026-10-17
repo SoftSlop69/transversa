@@ -20,13 +20,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -58,6 +65,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -79,11 +87,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun MediaPreview(media: MediaDescriptor, modifier: Modifier = Modifier) {
+fun MediaPreview(
+    media: MediaDescriptor,
+    modifier: Modifier = Modifier,
+    videoHeight: Dp = 260.dp,
+    fillAvailableSpace: Boolean = false,
+) {
     when (media.kind) {
-        MediaKind.VIDEO -> VideoPreview(media.uri, modifier)
-        MediaKind.AUDIO -> AudioPreview(media.uri, modifier)
-        MediaKind.IMAGE -> ImagePreview(media.uri, modifier)
+        MediaKind.VIDEO -> VideoPreview(media.uri, modifier, videoHeight.takeUnless { fillAvailableSpace })
+        MediaKind.AUDIO -> AudioPreview(media.uri, modifier, fillAvailableSpace)
+        MediaKind.IMAGE -> ImagePreview(media.uri, modifier, fillAvailableSpace)
         MediaKind.UNKNOWN -> PreviewUnavailable(modifier)
     }
 }
@@ -94,13 +107,31 @@ fun MediaDetailsPanel(
     activePreset: ConversionPreset?,
     hideFilename: Boolean,
     onSelectMedia: () -> Unit,
+    modifier: Modifier = Modifier,
+    previewHeight: Dp = 260.dp,
+    elevatedWhiteCard: Boolean = false,
+    expandPreviewToFill: Boolean = false,
+    bottomContent: (@Composable () -> Unit)? = null,
 ) {
     var expanded by remember(media.uri) { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
     val title = "${sourceFormat(media)} › ${activePreset?.profile?.container?.uppercase() ?: "?"}"
-    Card(modifier = Modifier.fillMaxWidth(), shape = shape) {
-        Column {
-            MediaPreview(media, Modifier.fillMaxWidth())
+    val content: @Composable () -> Unit = {
+        Column(
+            modifier = if (expandPreviewToFill) {
+                Modifier.fillMaxSize()
+            } else if (elevatedWhiteCard) {
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            } else {
+                Modifier
+            },
+        ) {
+            MediaPreview(
+                media = media,
+                modifier = if (expandPreviewToFill) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth(),
+                videoHeight = previewHeight,
+                fillAvailableSpace = expandPreviewToFill,
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -147,10 +178,33 @@ fun MediaDetailsPanel(
             }
         }
     }
+    if (elevatedWhiteCard) {
+        ElevatedCard(
+            modifier = modifier.fillMaxSize(),
+            shape = shape,
+            colors = CardDefaults.elevatedCardColors(containerColor = Color.White, contentColor = Color.Black),
+            elevation = CardDefaults.elevatedCardElevation(),
+        ) {
+            if (bottomContent == null) {
+                content()
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f).fillMaxWidth()) { content() }
+                    bottomContent()
+                }
+            }
+        }
+    } else {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = shape,
+            content = { content() },
+        )
+    }
 }
 
 @Composable
-private fun VideoPreview(uri: Uri, modifier: Modifier) {
+private fun VideoPreview(uri: Uri, modifier: Modifier, height: Dp?) {
     val context = LocalContext.current
     var previewFailed by remember(uri) { mutableStateOf(false) }
     var backdropFrame by remember(uri) { mutableStateOf<Bitmap?>(null) }
@@ -179,13 +233,13 @@ private fun VideoPreview(uri: Uri, modifier: Modifier) {
     }
 
     if (previewFailed) {
-        PreviewUnavailable(modifier.height(260.dp))
+        PreviewUnavailable(if (height == null) modifier else modifier.height(height))
     } else {
         Box(
             modifier = Modifier
                 .then(modifier)
                 .fillMaxWidth()
-                .height(260.dp)
+                .then(height?.let(Modifier::height) ?: Modifier.fillMaxHeight())
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clipToBounds(),
         ) {
@@ -261,7 +315,7 @@ private fun extractFirstVideoFrame(context: android.content.Context, uri: Uri): 
 }
 
 @Composable
-private fun AudioPreview(uri: Uri, modifier: Modifier) {
+private fun AudioPreview(uri: Uri, modifier: Modifier, fillAvailableSpace: Boolean) {
     val context = LocalContext.current
     var previewFailed by remember(uri) { mutableStateOf(false) }
     var isPlaying by remember(uri) { mutableStateOf(false) }
@@ -314,7 +368,12 @@ private fun AudioPreview(uri: Uri, modifier: Modifier) {
     if (previewFailed) {
         PreviewUnavailable(modifier)
     } else {
-        Column(modifier = modifier.fillMaxWidth().padding(20.dp)) {
+        Column(
+            modifier = modifier.fillMaxWidth()
+                .then(if (fillAvailableSpace) Modifier.fillMaxHeight() else Modifier)
+                .padding(20.dp),
+            verticalArrangement = if (fillAvailableSpace) Arrangement.Center else Arrangement.Top,
+        ) {
             Text(stringResource(R.string.audio_preview), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             Button(onClick = { if (player.isPlaying) player.pause() else player.play() }, shapes = ButtonDefaults.shapes()) {
@@ -342,13 +401,15 @@ private fun AudioPreview(uri: Uri, modifier: Modifier) {
 }
 
 @Composable
-private fun ImagePreview(uri: Uri, modifier: Modifier) {
+private fun ImagePreview(uri: Uri, modifier: Modifier, fillAvailableSpace: Boolean) {
     var previewFailed by remember(uri) { mutableStateOf(false) }
     var imageLoaded by remember(uri) { mutableStateOf(false) }
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 220.dp, max = 380.dp)
+            .then(
+                if (fillAvailableSpace) Modifier.fillMaxSize()
+                else Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 380.dp),
+            )
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
@@ -442,3 +503,4 @@ private fun MediaKind.labelResource(): Int = when (this) {
 }
 
 private fun formatTime(durationMs: Long): String = DateUtils.formatElapsedTime(durationMs.coerceAtLeast(0L) / 1_000L)
+
