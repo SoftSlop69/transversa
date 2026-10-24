@@ -1,8 +1,8 @@
 # Android Play testing release
 
 The release variant uses the Play package name `com.slopsoft.transversa`;
-the debug variant uses the `.debug` suffix. This release is version code 6,
-version name 0.6.0.
+the debug variant uses the `.debug` suffix. This release is version code 7,
+version name 0.7.0.
 
 ## Configure the upload key
 
