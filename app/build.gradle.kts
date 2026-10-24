@@ -26,7 +26,7 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 7
-        versionName = "0.6.1"
+        versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The in-process FFmpeg bridge is currently built for arm64-v8a only.
         // Keep the app package on the same ABI so Android Studio/emulators do
