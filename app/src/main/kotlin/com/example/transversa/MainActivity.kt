@@ -157,8 +157,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         } else {
+                            val detail = result.error?.trim()?.takeIf(String::isNotEmpty)
                             outputState = MediaOutputState(
-                                message = getString(R.string.output_action_failed),
+                                message = buildString {
+                                    append(getString(R.string.output_action_failed))
+                                    detail?.let { append('\n').append(it) }
+                                },
                                 hasError = true,
                             )
                         }

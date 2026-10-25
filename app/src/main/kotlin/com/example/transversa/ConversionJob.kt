@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.transversa
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -29,6 +30,9 @@ internal object ConversionJob {
             putExtra(MediaConversionService.EXTRA_PRESET, preset.encode())
             destination?.let {
                 putExtra(MediaConversionService.EXTRA_DESTINATION_URI, it.toString())
+                // URI permission flags only cover URIs carried by data or ClipData.
+                // The destination is an extra, so include it explicitly for the service.
+                clipData = ClipData.newUri(context.contentResolver, "Transversa save destination", it)
                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
         }
