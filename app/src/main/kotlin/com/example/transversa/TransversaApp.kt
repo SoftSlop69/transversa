@@ -152,7 +152,8 @@ fun TransversaApp(
     onSavePreset: (ConversionPreset) -> Unit,
     onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
     onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
-    onOpenSavedFile: (android.net.Uri) -> Unit,
+    onOpenOutputFile: (android.net.Uri) -> Unit,
+    onOpenHistoryFile: (ConversionHistoryEntry) -> Unit,
     onDeleteHistoryEntry: (String) -> Unit,
     onClearHistory: () -> Unit,
     onShareApp: () -> Unit,
@@ -273,13 +274,13 @@ fun TransversaApp(
                             navController.navigate("$ROUTE_PRESETS/${kind.name}") { launchSingleTop = true }
                         },
                         onSaveMedia, onShareMedia,
-                        onOpenSavedFile,
+                        onOpenOutputFile,
                         allPresets = allPresets,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
                 composable(ROUTE_HISTORY) {
-                    HistoryScreen(history, historyEnabled, onHistoryEnabledChange, onDeleteHistoryEntry, modifier = Modifier.fillMaxSize())
+                    HistoryScreen(history, historyEnabled, onHistoryEnabledChange, onDeleteHistoryEntry, onOpenHistoryFile, modifier = Modifier.fillMaxSize())
                 }
                 composable(ROUTE_INFO) {
                     InfoScreen(
@@ -409,7 +410,7 @@ private fun ConvertScreen(
     onGoToPresets: () -> Unit,
     onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
     onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
-    onOpenSavedFile: (android.net.Uri) -> Unit,
+    onOpenOutputFile: (android.net.Uri) -> Unit,
     allPresets: List<ConversionPreset>,
     modifier: Modifier = Modifier,
 ) {
@@ -430,7 +431,7 @@ private fun ConvertScreen(
                 onGoToPresets = onGoToPresets,
                 onSaveMedia = onSaveMedia,
                 onShareMedia = onShareMedia,
-                onOpenSavedFile = onOpenSavedFile,
+                onOpenOutputFile = onOpenOutputFile,
                 availableHeight = maxHeight,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -538,7 +539,7 @@ private fun ConvertScreen(
                         Text(
                             text = outputState.savedFileName,
                             modifier = Modifier.clickable(role = Role.Button) {
-                                onOpenSavedFile(outputState.savedFileUri)
+                            onOpenOutputFile(outputState.savedFileUri)
                             },
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium.copy(textDecoration = TextDecoration.Underline),
@@ -731,7 +732,7 @@ private fun HorizontalReadyConvertScreen(
     onGoToPresets: () -> Unit,
     onSaveMedia: (MediaDescriptor, ConversionPreset) -> Unit,
     onShareMedia: (MediaDescriptor, ConversionPreset) -> Unit,
-    onOpenSavedFile: (android.net.Uri) -> Unit,
+    onOpenOutputFile: (android.net.Uri) -> Unit,
     availableHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -817,7 +818,7 @@ private fun HorizontalReadyConvertScreen(
                                 Text(stringResource(R.string.saved_file_prefix), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 Text(
                                     text = outputState.savedFileName,
-                                    modifier = Modifier.clickable(role = Role.Button) { onOpenSavedFile(outputState.savedFileUri) },
+                                    modifier = Modifier.clickable(role = Role.Button) { onOpenOutputFile(outputState.savedFileUri) },
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.Underline),
                                 )
@@ -923,6 +924,7 @@ private fun HistoryScreen(
     historyEnabled: Boolean,
     onHistoryEnabledChange: (Boolean) -> Unit,
     onDelete: (String) -> Unit,
+    onOpenFile: (ConversionHistoryEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -959,6 +961,10 @@ private fun HistoryScreen(
             ) {
                 history.forEachIndexed { index, item ->
                     SegmentedListItem(
+                        modifier = Modifier.clickable(
+                            enabled = item.resultUri != null,
+                            role = Role.Button,
+                        ) { onOpenFile(item) },
                         shapes = ListItemDefaults.segmentedShapes(index = index, count = history.size),
                         leadingContent = {
                             val thumbnail = item.thumbnailPath?.let(::File)
