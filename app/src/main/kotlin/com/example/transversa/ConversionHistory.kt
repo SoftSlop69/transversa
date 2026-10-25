@@ -17,6 +17,8 @@ data class ConversionHistoryEntry(
     val action: OutputAction,
     val createdAtMillis: Long,
     val thumbnailPath: String? = null,
+    val resultUri: String? = null,
+    val mimeType: String? = null,
 )
 
 /** Small, private on-device history of completed conversions. */
@@ -42,12 +44,22 @@ class ConversionHistory(context: Context) {
                     action = OutputAction.valueOf(item.getString("action")),
                     createdAtMillis = item.getLong("createdAtMillis"),
                     thumbnailPath = item.optString("thumbnailPath").takeIf(String::isNotBlank),
+                    resultUri = item.optString("resultUri").takeIf(String::isNotBlank),
+                    mimeType = item.optString("mimeType").takeIf(String::isNotBlank),
                 )
             }.getOrNull()
         }
     }.getOrDefault(emptyList())
 
-    fun add(sourceName: String, outputName: String, kind: MediaKind, action: OutputAction, thumbnail: File? = null) {
+    fun add(
+        sourceName: String,
+        outputName: String,
+        kind: MediaKind,
+        action: OutputAction,
+        resultUri: String,
+        mimeType: String,
+        thumbnail: File? = null,
+    ) {
         if (!isEnabled()) {
             thumbnail?.delete()
             return
@@ -60,6 +72,8 @@ class ConversionHistory(context: Context) {
             action = action,
             createdAtMillis = System.currentTimeMillis(),
             thumbnailPath = thumbnail?.absolutePath,
+            resultUri = resultUri,
+            mimeType = mimeType,
         )
         write(listOf(item) + read())
     }
@@ -87,7 +101,9 @@ class ConversionHistory(context: Context) {
                 .put("kind", entry.kind.name)
                 .put("action", entry.action.name)
                 .put("createdAtMillis", entry.createdAtMillis)
-                .put("thumbnailPath", entry.thumbnailPath))
+                .put("thumbnailPath", entry.thumbnailPath)
+                .put("resultUri", entry.resultUri)
+                .put("mimeType", entry.mimeType))
         }
         preferences.edit().putString(KEY_ENTRIES, array.toString()).apply()
     }

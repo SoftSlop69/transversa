@@ -213,7 +213,7 @@ States: `Empty`, `Inspecting`, `Ready`, `Converting`, `Completed`, `Failed`, `Ca
 
 - Provide three top-level destinations: **Convert**, **History**, and **Presets**. Preset editing is a fourth screen opened from the Presets list.
 - Every destination has a title and a top-left back arrow. Use Android Navigation Compose and the system back behavior.
-- History uses Material 3 list items, newest first. Keep a local record of successful Save and Share conversions, with source/output names, media kind, action, and time. Each row has a delete action; provide a clear-all action.
+- History uses Material 3 list items, newest first. Keep a local record of successful Save and Share conversions, with source/output names, media kind, action, time, and the output URI/MIME type needed to reopen the result. Persist read permission for saved document URIs; share outputs use app-owned files. Tapping a history row opens the result in the system share sheet; each row has a delete action and the screen provides a clear-all action. The converted filename shown on the Convert screen also opens the result in the system share sheet.
 - Presets lists all media kinds using Material 3 list items. Tapping a row opens its editor; built-in **Simple** cannot be deleted, while other presets can. The list includes an Add preset action.
 
 ## 6. Save and Share workflows

@@ -158,7 +158,6 @@ class MediaConversionService : Service() {
                     MediaKind.UNKNOWN -> error("This media type cannot be converted.")
                 }
                 check(output.isFile && output.length() > 0L) { "FFmpeg returned an empty output." }
-                val outputName = outputFileName(media.displayName, spec.extension)
                 val resultUri = if (action == ConversionJob.ACTION_SAVE) {
                     val target = contentResolver.openOutputStream(requireNotNull(destinationUri), "wt")
                         ?: error("The selected destination could not be opened.")
@@ -166,6 +165,11 @@ class MediaConversionService : Service() {
                     requireNotNull(destinationUri)
                 } else {
                     FileProvider.getUriForFile(this, "$packageName.fileprovider", output)
+                }
+                val outputName = if (action == ConversionJob.ACTION_SAVE) {
+                    displayName(resultUri) ?: outputFileName(media.displayName, spec.extension)
+                } else {
+                    outputFileName(media.displayName, spec.extension)
                 }
 
                 PresetPreferences(this).recordSuccessfulConversion(preset)
@@ -180,6 +184,8 @@ class MediaConversionService : Service() {
                     outputName,
                     media.kind,
                     if (action == ConversionJob.ACTION_SAVE) OutputAction.SAVE else OutputAction.SHARE,
+                    resultUri.toString(),
+                    spec.mimeType,
                     thumbnail,
                 )
                 reportProgress(100, media.displayName)
@@ -206,6 +212,12 @@ class MediaConversionService : Service() {
         )
         sendBroadcast(Intent(ACTION_PROGRESS).setPackage(packageName).putExtra(EXTRA_PROGRESS, progress))
     }
+
+    private fun displayName(uri: Uri): String? = runCatching {
+        contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0)?.takeIf(String::isNotBlank) else null
+        }
+    }.getOrNull()
 
     private fun finishConversion(
         startId: Int,

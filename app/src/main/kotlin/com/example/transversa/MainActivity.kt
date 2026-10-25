@@ -147,7 +147,11 @@ class MainActivity : ComponentActivity() {
                                     savedFileUri = result.resultUri,
                                 )
                             } else {
-                                MediaOutputState(message = getString(R.string.share_sheet_opened))
+                                MediaOutputState(
+                                    message = getString(R.string.share_sheet_opened),
+                                    savedFileName = result.fileName.orEmpty(),
+                                    savedFileUri = result.resultUri,
+                                )
                             }
                             if (result.action == ConversionJob.ACTION_SHARE && result.resultUri != null) {
                                 openShareChooser(
@@ -309,8 +313,21 @@ class MainActivity : ComponentActivity() {
                     }
                     saveDocumentPicker.launch(createDocument)
                 },
-                onOpenSavedFile = { savedUri ->
-                    openSavedFileLocation(savedUri)
+                onOpenOutputFile = { savedUri ->
+                    openShareChooser(
+                        savedUri,
+                        contentResolver.getType(savedUri) ?: "application/octet-stream",
+                        displayName(savedUri) ?: getString(R.string.app_name),
+                    )
+                },
+                onOpenHistoryFile = { entry ->
+                    entry.resultUri?.let { Uri.parse(it) }?.let { uri ->
+                        openShareChooser(
+                            uri,
+                            entry.mimeType ?: contentResolver.getType(uri) ?: "application/octet-stream",
+                            entry.outputName,
+                        )
+                    }
                 },
                 onShareMedia = { media, preset ->
                     activePreset = preset
@@ -417,13 +434,11 @@ class MainActivity : ComponentActivity() {
         presetPreferences.rememberSaveLocation(destination)
     }
 
-    private fun openSavedFileLocation(savedUri: Uri) {
-        val filesIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(savedUri, DocumentsContract.Document.MIME_TYPE_DIR)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    private fun displayName(uri: Uri): String? = runCatching {
+        contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0)?.takeIf(String::isNotBlank) else null
         }
-        startActivity(filesIntent)
-    }
+    }.getOrNull()
 
     private fun openShareChooser(uri: Uri, mimeType: String, fileName: String) {
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
